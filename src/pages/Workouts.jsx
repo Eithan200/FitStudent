@@ -18,7 +18,7 @@ import {
   variantLabel,
   defaultVariant,
 } from '../data/mockData'
-import { generateWorkoutPlan, workoutForDiscipline } from '../services/ai'
+import { generateWorkoutPlan, workoutForDiscipline, recommendationsFor } from '../services/ai'
 import { calcCaloriesBurned } from '../utils/nutrition'
 import { todayKey, todayISO, DAY_KEYS, DAY_LETTERS_HE, hebrewShortDate } from '../utils/dates'
 
@@ -99,11 +99,17 @@ function WorkoutEditor({ initial, mode, profile, onSave, onClose, busy }) {
   const isCrossfit = type === 'crossfit'
   const calories = calcCaloriesBurned({ workout_type: type, variant, duration_min: duration, weight_kg: profile?.weight_kg })
 
-  function loadSuggestion(t, v) {
-    const w = workoutForDiscipline(t, v, 0)
+  const [showRecs, setShowRecs] = useState(false)
+  const recommendations = recommendationsFor(type, variant)
+
+  function loadWorkout(w) {
     setName(w.workout_name)
     setMuscle(w.muscle_groups)
     setExercises(w.exercises.map(normEx))
+  }
+  function loadSuggestion(t, v) {
+    const list = recommendationsFor(t, v)
+    if (list[0]) loadWorkout(list[0])
   }
   function pickType(t) {
     const v = defaultVariant(t, profile?.experience)
@@ -228,13 +234,35 @@ function WorkoutEditor({ initial, mode, profile, onSave, onClose, busy }) {
             <div className="flex items-center justify-between mb-1.5">
               <label className="label-muted">{isCrossfit ? 'תרגילים (לפי חלקים)' : 'תרגילים'}</label>
               <button
-                onClick={() => loadSuggestion(type, variant)}
+                onClick={() => setShowRecs((s) => !s)}
                 className="label-muted text-xs flex items-center gap-1"
                 style={{ color: 'var(--lime)' }}
               >
                 <RefreshCw size={12} /> טען המלצה
               </button>
             </div>
+
+            {showRecs && (
+              <div className="card-2 p-2.5 mb-2 flex flex-col gap-1.5">
+                <p className="label-muted" style={{ fontSize: 11 }}>בחר אימון מומלץ:</p>
+                {recommendations.map((w, ri) => (
+                  <button
+                    key={ri}
+                    onClick={() => {
+                      loadWorkout(w)
+                      setShowRecs(false)
+                    }}
+                    className="text-right rounded-lg px-2.5 py-2"
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                  >
+                    <span className="text-sm font-bold block">{w.workout_name}</span>
+                    <span className="label-muted block" style={{ fontSize: 11 }}>
+                      {w.muscle_groups ? `${w.muscle_groups} · ` : ''}{w.exercises.length} תרגילים
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               {exercises.map((ex, i) => (
                 <div key={i} className="card-2 p-2.5 flex flex-col gap-2">

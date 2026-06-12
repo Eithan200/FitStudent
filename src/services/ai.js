@@ -109,6 +109,13 @@ export function generateWorkoutPlan({ experience, workouts_per_week, workout_typ
   })
 }
 
+// All recommended workouts available for a discipline + variant, so the user
+// can choose among several instead of getting one arbitrary suggestion.
+export function recommendationsFor(workout_type, variant) {
+  const disc = planTemplates[workout_type] || planTemplates.gym
+  return disc[variant] || Object.values(disc)[0] || []
+}
+
 // Build a single day's workout from a discipline + variant (level/style) — used
 // when the user mixes disciplines across the week or edits a single day.
 export function workoutForDiscipline(workout_type, variant, index = 0) {
