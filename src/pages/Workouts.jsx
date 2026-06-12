@@ -59,7 +59,7 @@ export default function Workouts() {
       {tab === 'plan' && (
         <PlanTab plan={plan} user={user} profile={profile} reloadPlan={loadPlan} refreshProfile={refreshProfile} showToast={showToast} />
       )}
-      {tab === 'today' && <TodayTab plan={plan} user={user} profile={profile} showToast={showToast} />}
+      {tab === 'today' && <TodayTab plan={plan} user={user} profile={profile} reloadPlan={loadPlan} showToast={showToast} />}
       {tab === 'add' && <AddWorkoutTab user={user} profile={profile} showToast={showToast} onAdded={() => setParams({ tab: 'history' })} />}
       {tab === 'history' && <HistoryTab user={user} profile={profile} showToast={showToast} />}
       {tab === 'library' && <LibraryTab profile={profile} />}
@@ -468,7 +468,7 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
 
 /* ───────────────────────── Tab 2: Today's Workout ───────────────────────── */
 
-function TodayTab({ plan, user, profile, showToast }) {
+function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
   const todayPlan = plan.find((p) => p.day_of_week === todayKey())
   const exercises = todayPlan?.exercises_json || []
   const isRest = !todayPlan || todayPlan.workout_name === 'מנוחה' || exercises.length === 0
@@ -479,7 +479,46 @@ function TodayTab({ plan, user, profile, showToast }) {
   const [celebrating, setCelebrating] = useState(false)
   const [completed, setCompleted] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [savingPlan, setSavingPlan] = useState(false)
   const startTime = useRef(Date.now())
+
+  // edit today's planned workout in-place (same editor as My Plan)
+  async function saveTodayPlan(data) {
+    setSavingPlan(true)
+    const day = todayKey()
+    const row = data.rest
+      ? { workout_name: 'מנוחה', muscle_groups: '', exercises: [], workout_type: profile?.workout_type || 'gym', workout_variant: null }
+      : data
+    await supabase.from('workout_plan').delete().eq('user_id', user.id).eq('day_of_week', day)
+    const { error } = await supabase.from('workout_plan').insert({
+      user_id: user.id,
+      day_of_week: day,
+      workout_name: row.workout_name,
+      muscle_groups: row.muscle_groups || '',
+      exercises_json: row.exercises || [],
+      workout_type: row.workout_type,
+      workout_variant: row.workout_variant || null,
+    })
+    setSavingPlan(false)
+    setEditing(false)
+    if (error) return showToast('שגיאה בעדכון 😕')
+    showToast('האימון של היום עודכן ✅')
+    reloadPlan()
+  }
+
+  if (editing) {
+    return (
+      <WorkoutEditor
+        mode="plan"
+        profile={profile}
+        busy={savingPlan}
+        initial={todayPlan || { workout_name: '', workout_type: profile?.workout_type || 'gym', exercises_json: [] }}
+        onSave={saveTodayPlan}
+        onClose={() => setEditing(false)}
+      />
+    )
+  }
 
   async function completeWorkout() {
     setSaving(true)
@@ -516,10 +555,17 @@ function TodayTab({ plan, user, profile, showToast }) {
 
   if (isRest) {
     return (
-      <section className="card fade-up fade-up-2 text-center py-12">
+      <section className="card fade-up fade-up-2 text-center py-10">
         <p className="text-5xl mb-3">💤</p>
         <p className="font-bold text-lg">היום מנוחה</p>
-        <p className="label-muted text-sm mt-1">השריר נבנה בזמן המנוחה - תחזור מחר חזק יותר</p>
+        <p className="label-muted text-sm mt-1 mb-4">השריר נבנה בזמן המנוחה - תחזור מחר חזק יותר</p>
+        <button
+          className="btn-ghost flex items-center justify-center gap-2 mx-auto !w-auto px-5"
+          style={{ color: 'var(--lime)', borderColor: 'var(--lime-border)' }}
+          onClick={() => setEditing(true)}
+        >
+          <Pencil size={15} /> תכנן אימון להיום
+        </button>
       </section>
     )
   }
@@ -529,8 +575,21 @@ function TodayTab({ plan, user, profile, showToast }) {
       {celebrating && <Confetti />}
       <section className={`card fade-up fade-up-2 ${celebrating ? 'pulse-lime' : ''}`}>
         <div className="flex items-center justify-between mb-1">
-          <h2 className="section-title">{todayPlan.workout_name}</h2>
-          {completed && <CheckCircle2 size={20} style={{ color: 'var(--lime)' }} />}
+          <h2 className="section-title">
+            {todayPlan.workout_type && todayPlan.workout_type !== 'gym' ? `${DISCIPLINE_EMOJI[todayPlan.workout_type]} ` : ''}
+            {todayPlan.workout_name}
+          </h2>
+          <div className="flex items-center gap-2 shrink-0">
+            {completed && <CheckCircle2 size={20} style={{ color: 'var(--lime)' }} />}
+            <button
+              onClick={() => setEditing(true)}
+              aria-label="ערוך אימון"
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: 'var(--bg-card-2)', border: '1px solid var(--border)' }}
+            >
+              <Pencil size={14} style={{ color: 'var(--muted)' }} />
+            </button>
+          </div>
         </div>
         <p className="label-muted text-sm mb-3">
           {todayPlan.muscle_groups} · {exercises.length} תרגילים · לחץ על תרגיל לטיימר מנוחה ⏱️

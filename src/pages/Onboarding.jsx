@@ -21,7 +21,7 @@ const GOALS = [
 
 const EXPERIENCE = [
   { value: 'beginner', label: 'מתחיל', desc: 'עד שנה' },
-  { value: 'intermediate', label: 'ביניים', desc: '1–3 שנים' },
+  { value: 'intermediate', label: 'ביניים', desc: '1-3 שנים' },
   { value: 'advanced', label: 'מתקדם', desc: '3+ שנים' },
 ]
 

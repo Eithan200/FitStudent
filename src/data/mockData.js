@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// FitStudent mock data — Phase 1
+// FitStudent mock data -Phase 1
 // PHASE 2: foodResults + recipes will be replaced by real AI
 // responses coming back from Make.com webhooks (see src/services/ai.js)
 // ─────────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ export const recipes = [
       'מקציפים את הביצים עם מלח ופלפל.',
       'מחממים מחבת עם מעט שמן זית ומזהיבים את הבצל.',
       'מוסיפים את הביצים, ואחרי דקה את העגבנייה והגבינה.',
-      'מקפלים את האומלט ומבשלים עוד דקה — מוכן!',
+      'מקפלים את האומלט ומבשלים עוד דקה - מוכן!',
     ],
     macros: { calories: 380, protein_g: 32, carbs_g: 8, fat_g: 24 },
   },
@@ -106,7 +106,7 @@ export const recipes = [
     steps: [
       'מבשלים את האורז לפי ההוראות על האריזה.',
       'חותכים את העוף לקוביות ואת הירקות לרצועות.',
-      'מקפיצים את העוף במחבת חמה עם שמן 5–6 דקות.',
+      'מקפיצים את העוף במחבת חמה עם שמן 5-6 דקות.',
       'מוסיפים ירקות ושום ומקפיצים עוד 4 דקות.',
       'מוסיפים סויה ואת האורז המבושל, מערבבים ומגישים.',
     ],
@@ -123,7 +123,7 @@ export const recipes = [
       'מסננים את הטונה ומערבבים עם גבינת השמנת.',
       'קוצצים מלפפון חמוץ ובצל ומוסיפים לתערובת.',
       'מורחים על הלחם וסוגרים טוסט.',
-      'מטגנים בטוסטר 4–5 דקות עד הזהבה.',
+      'מטגנים בטוסטר 4-5 דקות עד הזהבה.',
     ],
     macros: { calories: 420, protein_g: 35, carbs_g: 40, fat_g: 13 },
   },
@@ -203,7 +203,7 @@ export const recipes = [
 ]
 
 // ─────────────────────────────────────────────────────────────
-// Workout disciplines — the user picks one in onboarding; it drives
+// Workout disciplines -the user picks one in onboarding; it drives
 // both the generated weekly plan (planTemplates) and the exercise library.
 // ─────────────────────────────────────────────────────────────
 
@@ -231,7 +231,7 @@ export const CROSSFIT_SECTION_LABELS = Object.fromEntries(CROSSFIT_SECTIONS.map(
 // Weekly workout-plan templates, keyed by discipline → experience level.
 // Each level is an ordered list of TRAINING days (rest days are filled by
 // the generator according to workouts_per_week). For non-gym disciplines
-// "reps" often means seconds/breaths — see each exercise description.
+// "reps" often means seconds/breaths -see each exercise description.
 // ─────────────────────────────────────────────────────────────
 
 const GYM = {
@@ -318,7 +318,7 @@ const GYM = {
       workout_name: 'דחיקה כבדה',
       muscle_groups: 'חזה, כתפיים, יד אחורית',
       exercises: [
-        { name: 'לחיצת חזה במוט', sets: 5, reps: 5, weight_kg: 80, description: 'עבודת כוח — מנוחה 3 דקות' },
+        { name: 'לחיצת חזה במוט', sets: 5, reps: 5, weight_kg: 80, description: 'עבודת כוח - מנוחה 3 דקות' },
         { name: 'לחיצת חזה משופע במוט', sets: 4, reps: 8, weight_kg: 60, description: 'שליטה מלאה בירידה' },
         { name: 'לחיצת כתפיים בעמידה', sets: 4, reps: 6, weight_kg: 40, description: 'ישבן וליבה מכווצים' },
         { name: 'מקבילים עם משקל', sets: 4, reps: 8, weight_kg: 10, description: 'משקל על חגורה' },
@@ -332,12 +332,12 @@ const GYM = {
         { name: 'דדליפט', sets: 5, reps: 5, weight_kg: 100, description: 'גב ניטרלי, דחיפה מהרצפה' },
         { name: 'מתח עם משקל', sets: 4, reps: 6, weight_kg: 10, description: 'טווח תנועה מלא' },
         { name: 'חתירת T-Bar', sets: 4, reps: 8, weight_kg: 50, description: 'כיווץ שיא בסוף המשיכה' },
-        { name: 'משיכת פנים בכבל', sets: 3, reps: 15, weight_kg: 25, description: 'בריאות הכתף — אל תדלג' },
+        { name: 'משיכת פנים בכבל', sets: 3, reps: 15, weight_kg: 25, description: 'בריאות הכתף - אל תדלג' },
         { name: 'כפיפת מרפקים במוט W', sets: 4, reps: 10, weight_kg: 30, description: 'ללא תנופה' },
       ],
     },
     {
-      workout_name: 'רגליים — קוואדים',
+      workout_name: 'רגליים - קוואדים',
       muscle_groups: 'רגליים קדמיות, ישבן',
       exercises: [
         { name: 'סקוואט במוט', sets: 5, reps: 5, weight_kg: 100, description: 'עומק מלא, חגורת כוח' },
@@ -348,7 +348,7 @@ const GYM = {
       ],
     },
     {
-      workout_name: 'דחיקה — נפח',
+      workout_name: 'דחיקה - נפח',
       muscle_groups: 'חזה, כתפיים',
       exercises: [
         { name: 'לחיצת משקולות שטוח', sets: 4, reps: 10, weight_kg: 30, description: 'מתיחה עמוקה למטה' },
@@ -372,7 +372,7 @@ const GYM = {
   ],
 }
 
-// Yoga — "reps" = שניות החזקה / נשימות. weight always 0.
+// Yoga -"reps" = שניות החזקה / נשימות. weight always 0.
 const YOGA = {
   hatha: [
     {
@@ -425,7 +425,7 @@ const YOGA = {
       muscle_groups: 'גוף מלא, איזון',
       exercises: [
         { name: 'ברכת השמש B', sets: 5, reps: 60, weight_kg: 0, description: 'סבב מלא בקצב נמרץ' },
-        { name: 'עורב (Bakasana)', sets: 3, reps: 25, weight_kg: 0, description: 'איזון ידיים — התקדם בהדרגה' },
+        { name: 'עורב (Bakasana)', sets: 3, reps: 25, weight_kg: 0, description: 'איזון ידיים - התקדם בהדרגה' },
         { name: 'תנוחת הלוחם III', sets: 3, reps: 30, weight_kg: 0, description: 'שיווי משקל על רגל אחת' },
         { name: 'גלגל (Urdhva Dhanurasana)', sets: 3, reps: 30, weight_kg: 0, description: 'פתיחת חזה עמוקה' },
         { name: 'שאוואסנה', sets: 1, reps: 180, weight_kg: 0, description: 'הרפיה ארוכה' },
@@ -434,7 +434,7 @@ const YOGA = {
   ],
 }
 
-// Pilates — "reps" = חזרות מבוקרות או שניות החזקה. weight 0.
+// Pilates -"reps" = חזרות מבוקרות או שניות החזקה. weight 0.
 const PILATES = {
   easy: [
     {
@@ -496,14 +496,14 @@ const PILATES = {
   ],
 }
 
-// Crossfit — WOD-style. "reps" = חזרות לסבב; משקלים מוצעים בק"ג.
+// Crossfit -WOD-style. "reps" = חזרות לסבב; משקלים מוצעים בק"ג.
 const CROSSFIT = {
   beginner: [
     {
-      workout_name: 'WOD מבוא — AMRAP 12',
+      workout_name: 'WOD מבוא - AMRAP 12',
       muscle_groups: 'גוף מלא, סיבולת',
       exercises: [
-        { name: 'אוויר סקוואט', sets: 3, reps: 15, weight_kg: 0, description: 'AMRAP — כמה סבבים ב-12 דקות' },
+        { name: 'אוויר סקוואט', sets: 3, reps: 15, weight_kg: 0, description: 'AMRAP - כמה סבבים ב-12 דקות' },
         { name: 'שכיבות סמיכה (על ברכיים אופציה)', sets: 3, reps: 10, weight_kg: 0, description: 'טכניקה לפני מהירות' },
         { name: 'קפיצות כוכב / ג׳אמפינג ג׳ק', sets: 3, reps: 20, weight_kg: 0, description: 'העלאת דופק' },
         { name: 'פלאנק', sets: 3, reps: 30, weight_kg: 0, description: '30 שניות בין סבבים' },
@@ -522,13 +522,13 @@ const CROSSFIT = {
   ],
   intermediate: [
     {
-      workout_name: '"Cindy" — AMRAP 20',
+      workout_name: '"Cindy" - AMRAP 20',
       muscle_groups: 'גוף מלא, סיבולת',
       exercises: [
-        { name: 'מתח', sets: 1, reps: 5, weight_kg: 0, description: '5 בכל סבב — כמה סבבים ב-20 דקות' },
+        { name: 'מתח', sets: 1, reps: 5, weight_kg: 0, description: '5 בכל סבב - כמה סבבים ב-20 דקות' },
         { name: 'שכיבות סמיכה', sets: 1, reps: 10, weight_kg: 0, description: '10 בכל סבב' },
         { name: 'אוויר סקוואט', sets: 1, reps: 15, weight_kg: 0, description: '15 בכל סבב' },
-        { name: 'דאבל-אנדר (קפיצה בחבל)', sets: 3, reps: 30, weight_kg: 0, description: 'גמר — סיבולת' },
+        { name: 'דאבל-אנדר (קפיצה בחבל)', sets: 3, reps: 30, weight_kg: 0, description: 'גמר -סיבולת' },
       ],
     },
     {
@@ -544,7 +544,7 @@ const CROSSFIT = {
   ],
   advanced: [
     {
-      workout_name: '"Fran" — 21-15-9',
+      workout_name: '"Fran" - 21-15-9',
       muscle_groups: 'גוף מלא, עצימות',
       exercises: [
         { name: 'תרוסטרים', sets: 1, reps: 21, weight_kg: 43, description: '21-15-9 לזמן, מוט 43 ק"ג' },
@@ -558,7 +558,7 @@ const CROSSFIT = {
       muscle_groups: 'גוף מלא, כוח',
       exercises: [
         { name: 'בק סקוואט כבד', sets: 5, reps: 3, weight_kg: 90, description: '5×3 כוח, מנוחה מלאה' },
-        { name: 'דדליפט', sets: 1, reps: 5, weight_kg: 100, description: 'EMOM — 5 כל דקה למשך 8 דקות' },
+        { name: 'דדליפט', sets: 1, reps: 5, weight_kg: 100, description: 'EMOM - 5 כל דקה למשך 8 דקות' },
         { name: 'האנג פאוור סנאץ׳', sets: 6, reps: 2, weight_kg: 45, description: 'מהירות וטכניקה' },
         { name: 'בארפי על מוט', sets: 4, reps: 12, weight_kg: 0, description: 'גמר מטבולי' },
       ],
@@ -597,7 +597,7 @@ export const WORKOUT_MET = {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Exercise / movement library — tagged by discipline
+// Exercise / movement library -tagged by discipline
 // ─────────────────────────────────────────────────────────────
 
 export const MUSCLE_GROUPS = [
@@ -639,22 +639,22 @@ export const disciplineMovements = [
   { name: 'תנוחת הכלב מביט מטה', muscle_group: 'yoga', sets_recommendation: '3×45 שנ׳', description: 'מתיחת גב וגיד הברך. עקבים לכיוון הרצפה, גב ארוך.' },
   { name: 'תנוחת הלוחם II', muscle_group: 'yoga', sets_recommendation: '45 שנ׳ לכל צד', description: 'חיזוק רגליים ופתיחת ירכיים. ברך קדמית מעל הקרסול.' },
   { name: 'תנוחת העץ', muscle_group: 'yoga', sets_recommendation: '40 שנ׳ לכל רגל', description: 'שיווי משקל וריכוז. כף רגל על ירך פנימית, לא על הברך.' },
-  { name: 'ברכת השמש A', muscle_group: 'yoga', sets_recommendation: '4 סבבים', description: 'רצף זורם המסנכרן תנועה ונשימה — חימום מצוין.' },
-  { name: 'שאוואסנה', muscle_group: 'yoga', sets_recommendation: '2–3 דק׳', description: 'תנוחת מנוחה לסיום. הרפיה מלאה של הגוף.' },
+  { name: 'ברכת השמש A', muscle_group: 'yoga', sets_recommendation: '4 סבבים', description: 'רצף זורם המסנכרן תנועה ונשימה - חימום מצוין.' },
+  { name: 'שאוואסנה', muscle_group: 'yoga', sets_recommendation: '2-3 דק׳', description: 'תנוחת מנוחה לסיום. הרפיה מלאה של הגוף.' },
   // Pilates
   { name: 'מאה (The Hundred)', muscle_group: 'pilates', sets_recommendation: '100 נקישות', description: 'הפעלת ליבה ונשימה. רגליים בזווית, גב צמוד למזרן.' },
   { name: 'גלגול אגן (Pelvic Curl)', muscle_group: 'pilates', sets_recommendation: '3×10', description: 'ניוד עמוד שדרה חוליה-חוליה וחיזוק ישבן.' },
-  { name: 'טיזר (Teaser)', muscle_group: 'pilates', sets_recommendation: '3×8', description: 'שליטת ליבה מתקדמת — גו ורגליים לצורת V.' },
+  { name: 'טיזר (Teaser)', muscle_group: 'pilates', sets_recommendation: '3×8', description: 'שליטת ליבה מתקדמת - גו ורגליים לצורת V.' },
   { name: 'שחייה (Swimming)', muscle_group: 'pilates', sets_recommendation: '3×20', description: 'חיזוק שרשרת אחורית בשכיבת בטן.' },
   // Crossfit
   { name: 'תרוסטרים', muscle_group: 'crossfit', sets_recommendation: '4×10', description: 'סקוואט קדמי ולחיצה מעל הראש בתנועה אחת רציפה.' },
   { name: 'קטלבל סווינג', muscle_group: 'crossfit', sets_recommendation: '4×15', description: 'כוח מתפרץ מהירך. הקטלבל לגובה הכתף, גב ניטרלי.' },
   { name: 'בארפי', muscle_group: 'crossfit', sets_recommendation: '4×10', description: 'תרגיל גוף-מלא: ירידה, שכיבת סמיכה, קפיצה מעלה.' },
-  { name: 'דאבל-אנדר', muscle_group: 'crossfit', sets_recommendation: '3×30', description: 'קפיצה בחבל עם 2 סיבובים לכל קפיצה — סיבולת ותיאום.' },
+  { name: 'דאבל-אנדר', muscle_group: 'crossfit', sets_recommendation: '3×30', description: 'קפיצה בחבל עם 2 סיבובים לכל קפיצה - סיבולת ותיאום.' },
   { name: 'וול-בול', muscle_group: 'crossfit', sets_recommendation: '4×15', description: 'סקוואט עם זריקת כדור כוח למטרה גבוהה.' },
 ]
 
-// Quick-add common foods — macros are for the listed portion, whose weight is
+// Quick-add common foods -macros are for the listed portion, whose weight is
 // `grams`. The Log screen lets the user override grams for scale-accurate logging.
 export const COMMON_FOODS = [
   { name: 'ביצה קשה', emoji: '🥚', portion: 'יחידה', grams: 50, calories: 78, protein_g: 6, carbs_g: 1, fat_g: 5 },
@@ -674,12 +674,12 @@ export const COMMON_FOODS = [
 // ─────────────────────────────────────────────────────────────
 
 export const dailyTips = [
-  'לאחר אימון כוח, נסה לאכול 20–40 גרם חלבון תוך 30 דקות לשיקום מיטבי של השריר.',
+  'לאחר אימון כוח, נסה לאכול 20-40 גרם חלבון תוך 30 דקות לשיקום מיטבי של השריר.',
   'שתיית כוס מים לפני כל ארוחה עוזרת גם להידרציה וגם לתחושת שובע.',
-  'שינה של 7–9 שעות חשובה לבניית שריר לא פחות מהאימון עצמו.',
-  'ביצים הן אחד ממקורות החלבון הזולים והאיכותיים ביותר לסטודנט — כ-6 גרם חלבון לביצה.',
+  'שינה של 7-9 שעות חשובה לבניית שריר לא פחות מהאימון עצמו.',
+  'ביצים הן אחד ממקורות החלבון הזולים והאיכותיים ביותר לסטודנט - כ-6 גרם חלבון לביצה.',
   'אל תדלג על חימום! 5 דקות חימום מפחיתות משמעותית את סיכון הפציעה.',
-  'קפאין 30–45 דקות לפני אימון יכול לשפר ביצועים — אבל לא אחרי 16:00 אם אתה רוצה לישון טוב.',
+  'קפאין 30-45 דקות לפני אימון יכול לשפר ביצועים - אבל לא אחרי 16:00 אם אתה רוצה לישון טוב.',
   'התקדמות איטית ועקבית מנצחת דיאטת קסם. שאף ל-0.5% שינוי במשקל בשבוע.',
   'קטניות כמו עדשים וחומוס הן חלבון + פחמימה + סיבים במחיר של שקלים בודדים.',
   'תעדוף תרגילים מורכבים (סקוואט, דדליפט, לחיצות) לפני תרגילי בידוד באימון.',

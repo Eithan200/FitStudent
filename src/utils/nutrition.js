@@ -23,9 +23,9 @@ const ACTIVITY_MULTIPLIERS = {
 
 export const ACTIVITY_LEVELS = [
   { value: 'sedentary', label: 'יושבני', desc: 'ללא פעילות' },
-  { value: 'light', label: 'קל', desc: '1–3 אימונים בשבוע' },
-  { value: 'moderate', label: 'מתון', desc: '3–5 אימונים בשבוע' },
-  { value: 'active', label: 'פעיל', desc: '6–7 אימונים בשבוע' },
+  { value: 'light', label: 'קל', desc: '1-3 אימונים בשבוע' },
+  { value: 'moderate', label: 'מתון', desc: '3-5 אימונים בשבוע' },
+  { value: 'active', label: 'פעיל', desc: '6-7 אימונים בשבוע' },
   { value: 'very_active', label: 'מאוד פעיל', desc: 'אימונים כפולים' },
 ]
 
