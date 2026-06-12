@@ -126,6 +126,27 @@ frontend. See the Phase 2 guide in `docs/` for the full step-by-step.
 
 ---
 
+## Branching & releases
+
+A lightweight Git Flow keeps history readable:
+
+| Branch | Purpose |
+|--------|---------|
+| `main` | Stable, production branch. Auto-deploys to Vercel. Always releasable. |
+| `develop` | Integration branch for ongoing work (e.g. Phase 2). |
+| `feature/*` | Short-lived branches per feature, merged into `develop` via pull request. |
+
+**Workflow:** branch off `develop` → open a pull request → merge to `develop` →
+once stable, merge `develop` into `main` for release.
+
+**Releases** are marked with annotated tags following
+[Semantic Versioning](https://semver.org): e.g. `v1.0.0-alpha` (Phase 1).
+
+> Recommended GitHub setting: protect `main` (require a pull request and a
+> passing build before merge).
+
+---
+
 ## Security notes
 
 - No credentials are committed. Configuration is read from environment
