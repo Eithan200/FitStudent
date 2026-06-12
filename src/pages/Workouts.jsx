@@ -359,7 +359,7 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
     if (discipline === current || switching) return
     setSwitching(discipline)
     // regenerate the weekly plan for the new discipline; history (workout_log) is untouched
-    const newPlan = generateWorkoutPlan({
+    const newPlan = await generateWorkoutPlan({
       experience: profile?.experience,
       workouts_per_week: profile?.workouts_per_week,
       workout_type: discipline,

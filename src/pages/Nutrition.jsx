@@ -7,6 +7,7 @@ import { analyzeFoodImage, detectFridgeIngredients, suggestRecipesFromIngredient
 import { useToast } from '../components/Toast'
 import SubTabs from '../components/SubTabs'
 import { COMMON_FOODS, recipes as recommendedRecipes } from '../data/mockData'
+import { imageFileToBase64 } from '../utils/image'
 import { todayISO } from '../utils/dates'
 
 const TABS = [
@@ -317,8 +318,8 @@ function LogMealTab({ user, onAdded, showToast }) {
     const file = e.target.files?.[0]
     if (!file) return
     setMode('analyzing')
-    // PHASE 2: convert file to base64 and POST to Make.com Scenario A
-    const mock = await analyzeFoodImage(null)
+    const base64 = await imageFileToBase64(file)
+    const mock = await analyzeFoodImage(base64)
     setPhoto({ result: mock, quantity: 100 })
     setMode('photo')
     e.target.value = ''
@@ -638,8 +639,8 @@ function FridgeTab({ showToast }) {
     const file = e.target.files?.[0]
     if (!file) return
     setPhase('detecting')
-    // PHASE 2: convert file to base64 → detectFridgeIngredients posts to Make.com Scenario B
-    const detected = await detectFridgeIngredients(null)
+    const base64 = await imageFileToBase64(file)
+    const detected = await detectFridgeIngredients(base64)
     setIngredients(detected)
     setPhase('review')
     e.target.value = ''
