@@ -53,8 +53,10 @@ CREATE TABLE IF NOT EXISTS workout_log (
   date DATE DEFAULT CURRENT_DATE,
   workout_name TEXT,
   workout_type TEXT DEFAULT 'gym',  -- gym | yoga | pilates | crossfit
+  workout_variant TEXT,  -- gym/crossfit level | pilates easy/medium/hard | yoga style
   exercises_json JSONB DEFAULT '[]',
   duration_min INTEGER,
+  calories_burned NUMERIC,  -- estimated kcal burned (MET-based)
   completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -65,8 +67,10 @@ CREATE TABLE IF NOT EXISTS workout_plan (
   day_of_week TEXT,
   workout_name TEXT,
   workout_type TEXT DEFAULT 'gym',  -- gym | yoga | pilates | crossfit
+  workout_variant TEXT,  -- level/style of the day's workout
   muscle_groups TEXT,
   exercises_json JSONB DEFAULT '[]',
+  planned_date DATE,  -- optional specific date (mixed/edited weeks)
   generated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

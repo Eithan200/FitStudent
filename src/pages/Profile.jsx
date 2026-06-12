@@ -383,7 +383,7 @@ function SettingsTab({ user, profile, signOut, navigate, showToast, refreshProfi
           יעד מים יומי
         </h2>
         <p className="label-muted text-sm mb-3">
-          כמה מים אתה רוצה לשתות ביום? (מומלץ 2–3 ליטר) — מתעדכן במסך הבית
+          כמה מים אתה רוצה לשתות ביום? (מומלץ 2-3 ליטר) - מתעדכן במסך הבית
         </p>
         <div className="flex gap-2">
           <input
@@ -408,7 +408,7 @@ function SettingsTab({ user, profile, signOut, navigate, showToast, refreshProfi
           Telegram
         </h2>
         <p className="label-muted text-sm mb-3">
-          חבר את חשבון הטלגרם שלך לקבלת דוח בוקר (07:00) והתראת ערב (20:00) — יופעל בשלב 2
+          חבר את חשבון הטלגרם שלך לקבלת דוח בוקר (07:00) והתראת ערב (20:00) - יופעל בשלב 2
         </p>
         <div className="flex gap-2">
           <input
@@ -432,7 +432,7 @@ function SettingsTab({ user, profile, signOut, navigate, showToast, refreshProfi
         </h2>
         <p className="text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>
           הנתונים שלך (פרופיל, יומן תזונה, אימונים ומשקל) נשמרים במסד נתונים מאובטח (Supabase)
-          וגלויים רק לך — כל משתמש רואה אך ורק את המידע של עצמו. בשלב 2, תמונות ארוחות יישלחו
+          וגלויים רק לך - כל משתמש רואה אך ורק את המידע של עצמו. בשלב 2, תמונות ארוחות יישלחו
           לניתוח AI חיצוני (Claude Vision) ונתוני תזונה לאימות (Perplexity). ניתן למחוק את החשבון
           וכל הנתונים בכל רגע בכפתור למטה.
         </p>

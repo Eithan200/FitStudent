@@ -1,6 +1,17 @@
 // Nutrition formulas — exact Mifflin-St Jeor per Build Plan §9.
 // PHASE 2: protein target will come from Perplexity research query via Make.com;
 // until then we use the 1.6–2.2 g/kg evidence-based range by goal.
+import { WORKOUT_MET } from '../data/mockData'
+
+// Rough calorie burn for a session: kcal ≈ MET × kg × hours.
+// variant = experience (gym/crossfit) | level (pilates) | style (yoga).
+export function calcCaloriesBurned({ workout_type = 'gym', variant, duration_min, weight_kg }) {
+  const table = WORKOUT_MET[workout_type] || WORKOUT_MET.gym
+  const met = table[variant] ?? Object.values(table)[1] ?? 5
+  const kg = +weight_kg || 70
+  const hours = (+duration_min || 0) / 60
+  return Math.round(met * kg * hours)
+}
 
 const ACTIVITY_MULTIPLIERS = {
   sedentary: 1.2,

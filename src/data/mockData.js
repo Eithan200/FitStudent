@@ -374,7 +374,7 @@ const GYM = {
 
 // Yoga — "reps" = שניות החזקה / נשימות. weight always 0.
 const YOGA = {
-  beginner: [
+  hatha: [
     {
       workout_name: 'זרימת בוקר עדינה',
       muscle_groups: 'גמישות, נשימה',
@@ -396,7 +396,7 @@ const YOGA = {
       ],
     },
   ],
-  intermediate: [
+  vinyasa: [
     {
       workout_name: 'ויניאסה זורמת',
       muscle_groups: 'גוף מלא, ליבה',
@@ -419,7 +419,7 @@ const YOGA = {
       ],
     },
   ],
-  advanced: [
+  power: [
     {
       workout_name: 'ויניאסה מתקדמת',
       muscle_groups: 'גוף מלא, איזון',
@@ -436,7 +436,7 @@ const YOGA = {
 
 // Pilates — "reps" = חזרות מבוקרות או שניות החזקה. weight 0.
 const PILATES = {
-  beginner: [
+  easy: [
     {
       workout_name: 'יסודות מאט פילאטיס',
       muscle_groups: 'ליבה, יציבה',
@@ -458,7 +458,7 @@ const PILATES = {
       ],
     },
   ],
-  intermediate: [
+  medium: [
     {
       workout_name: 'זרימת ליבה ביניים',
       muscle_groups: 'ליבה, ירך',
@@ -481,7 +481,7 @@ const PILATES = {
       ],
     },
   ],
-  advanced: [
+  hard: [
     {
       workout_name: 'מאט מתקדם',
       muscle_groups: 'גוף מלא, ליבה',
@@ -567,6 +567,34 @@ const CROSSFIT = {
 }
 
 export const planTemplates = { gym: GYM, yoga: YOGA, pilates: PILATES, crossfit: CROSSFIT }
+
+// Per-discipline "variant": gym/crossfit by experience level, pilates by
+// intensity, yoga by style. Drives the template chosen and the calorie burn.
+export const DISCIPLINE_VARIANT = {
+  gym: { label: 'רמה', options: [{ key: 'beginner', label: 'מתחיל' }, { key: 'intermediate', label: 'ביניים' }, { key: 'advanced', label: 'מתקדם' }] },
+  crossfit: { label: 'רמה', options: [{ key: 'beginner', label: 'מתחיל' }, { key: 'intermediate', label: 'ביניים' }, { key: 'advanced', label: 'מתקדם' }] },
+  pilates: { label: 'רמת קושי', options: [{ key: 'easy', label: 'קל' }, { key: 'medium', label: 'בינוני' }, { key: 'hard', label: 'קשה' }] },
+  yoga: { label: 'סוג', options: [{ key: 'hatha', label: 'האטה' }, { key: 'vinyasa', label: 'ויניאסה' }, { key: 'power', label: 'פאוור' }] },
+}
+
+export const variantLabel = (discipline, key) =>
+  DISCIPLINE_VARIANT[discipline]?.options.find((o) => o.key === key)?.label || ''
+
+// default variant for a discipline given the user's experience
+export function defaultVariant(discipline, experience = 'beginner') {
+  if (discipline === 'gym' || discipline === 'crossfit') return experience
+  if (discipline === 'pilates') return { beginner: 'easy', intermediate: 'medium', advanced: 'hard' }[experience] || 'medium'
+  if (discipline === 'yoga') return 'vinyasa'
+  return 'beginner'
+}
+
+// MET values for rough calorie-burn estimates: kcal ≈ MET × kg × hours
+export const WORKOUT_MET = {
+  gym: { beginner: 4.0, intermediate: 5.0, advanced: 6.0 },
+  crossfit: { beginner: 7.0, intermediate: 8.5, advanced: 10.0 },
+  pilates: { easy: 2.5, medium: 3.5, hard: 4.5 },
+  yoga: { hatha: 2.5, vinyasa: 4.0, power: 5.0 },
+}
 
 // ─────────────────────────────────────────────────────────────
 // Exercise / movement library — tagged by discipline

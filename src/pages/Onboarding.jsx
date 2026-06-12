@@ -112,6 +112,7 @@ export default function Onboarding() {
           muscle_groups: day.muscle_groups,
           exercises_json: day.exercises,
           workout_type: day.workout_type,
+          workout_variant: day.workout_variant,
         }))
       )
       if (planErr) throw planErr
@@ -119,7 +120,7 @@ export default function Onboarding() {
       await refreshProfile()
       navigate('/home')
     } catch (err) {
-      setError(err.message || 'שגיאה בשמירה — נסה שוב')
+      setError(err.message || 'שגיאה בשמירה - נסה שוב')
     } finally {
       setBusy(false)
     }
@@ -309,7 +310,7 @@ export default function Onboarding() {
               />
             </Field>
             <div className="card-2 p-3 text-sm" style={{ color: 'var(--muted)' }}>
-              בסיום נחשב עבורך BMR, TDEE, יעד קלורי ופירוט מאקרוס — ונבנה לך תוכנית אימונים
+              בסיום נחשב עבורך BMR, TDEE, יעד קלורי ופירוט מאקרוס - ונבנה לך תוכנית אימונים
               שבועית מותאמת אישית. 🎯
             </div>
           </>

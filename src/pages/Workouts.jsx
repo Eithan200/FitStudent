@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Timer, CheckCircle2, Dumbbell, X, Plus, Trash2, Pencil } from 'lucide-react'
+import { Timer, CheckCircle2, Dumbbell, X, Plus, Trash2, Pencil, Flame, RefreshCw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
@@ -14,8 +14,12 @@ import {
   DISCIPLINE_LABELS,
   DISCIPLINE_EMOJI,
   CROSSFIT_SECTIONS,
+  DISCIPLINE_VARIANT,
+  variantLabel,
+  defaultVariant,
 } from '../data/mockData'
 import { generateWorkoutPlan, workoutForDiscipline } from '../services/ai'
+import { calcCaloriesBurned } from '../utils/nutrition'
 import { todayKey, todayISO, DAY_KEYS, DAY_LETTERS_HE, hebrewShortDate } from '../utils/dates'
 
 const TABS = [
@@ -55,13 +59,238 @@ export default function Workouts() {
       {tab === 'plan' && (
         <PlanTab plan={plan} user={user} profile={profile} reloadPlan={loadPlan} refreshProfile={refreshProfile} showToast={showToast} />
       )}
-      {tab === 'today' && <TodayTab plan={plan} user={user} showToast={showToast} />}
+      {tab === 'today' && <TodayTab plan={plan} user={user} profile={profile} showToast={showToast} />}
       {tab === 'add' && <AddWorkoutTab user={user} profile={profile} showToast={showToast} onAdded={() => setParams({ tab: 'history' })} />}
-      {tab === 'history' && <HistoryTab user={user} />}
+      {tab === 'history' && <HistoryTab user={user} profile={profile} showToast={showToast} />}
       {tab === 'library' && <LibraryTab profile={profile} />}
 
       {toast}
     </div>
+  )
+}
+
+/* ───────────────────────── Shared workout editor ───────────────────────── */
+
+function normEx(ex) {
+  return {
+    name: ex.name || '',
+    sets: ex.sets ?? 3,
+    reps: ex.reps ?? 10,
+    weight_kg: ex.weight_kg ?? 0,
+    section: ex.section || 'strength',
+    description: ex.description || '',
+  }
+}
+
+// Editor for a single workout -used to tweak a planned day (future) or a past
+// logged workout. Starts from the recommendation but every field is editable.
+function WorkoutEditor({ initial, mode, profile, onSave, onClose, busy }) {
+  const startRest = initial.workout_name === 'מנוחה' || (!initial.workout_name && (initial.exercises_json || initial.exercises || []).length === 0 && mode === 'plan' && initial.isRest)
+  const [rest, setRest] = useState(initial.workout_name === 'מנוחה')
+  const [type, setType] = useState(initial.workout_type || profile?.workout_type || 'gym')
+  const [variant, setVariant] = useState(initial.workout_variant || defaultVariant(initial.workout_type || 'gym', profile?.experience))
+  const [name, setName] = useState(initial.workout_name && initial.workout_name !== 'מנוחה' ? initial.workout_name : '')
+  const [muscle, setMuscle] = useState(initial.muscle_groups || '')
+  const [duration, setDuration] = useState(initial.duration_min || 45)
+  const [exercises, setExercises] = useState(() => (initial.exercises_json || initial.exercises || []).map(normEx))
+
+  const variantOpts = DISCIPLINE_VARIANT[type]?.options || []
+  const isWeighted = type === 'gym' || type === 'crossfit'
+  const isCrossfit = type === 'crossfit'
+  const calories = calcCaloriesBurned({ workout_type: type, variant, duration_min: duration, weight_kg: profile?.weight_kg })
+
+  function loadSuggestion(t, v) {
+    const w = workoutForDiscipline(t, v, 0)
+    setName(w.workout_name)
+    setMuscle(w.muscle_groups)
+    setExercises(w.exercises.map(normEx))
+  }
+  function pickType(t) {
+    const v = defaultVariant(t, profile?.experience)
+    setType(t)
+    setVariant(v)
+    setRest(false)
+    loadSuggestion(t, v)
+  }
+  function pickVariant(v) {
+    setVariant(v)
+    loadSuggestion(type, v)
+  }
+  const upd = (i, k, val) => setExercises((l) => l.map((e, j) => (j === i ? { ...e, [k]: val } : e)))
+  const addRow = () => setExercises((l) => [...l, normEx({ name: '' })])
+  const delRow = (i) => setExercises((l) => l.filter((_, j) => j !== i))
+
+  function handleSave() {
+    if (rest) return onSave({ rest: true })
+    const clean = exercises
+      .filter((e) => e.name.trim())
+      .map((e) => ({
+        name: e.name.trim(),
+        sets: +e.sets || 0,
+        reps: +e.reps || 0,
+        weight_kg: +e.weight_kg || 0,
+        actual_weight_kg: +e.weight_kg || 0,
+        ...(isCrossfit ? { section: e.section } : {}),
+        ...(e.description ? { description: e.description } : {}),
+      }))
+    onSave({
+      rest: false,
+      workout_name: name.trim() || DISCIPLINE_LABELS[type],
+      workout_type: type,
+      workout_variant: variant,
+      muscle_groups: muscle,
+      exercises: clean,
+      duration_min: +duration || null,
+      calories_burned: calories,
+    })
+  }
+
+  return (
+    <section className="card fade-up flex flex-col gap-3.5">
+      <div className="flex items-center justify-between">
+        <h2 className="section-title">{mode === 'plan' ? 'עריכת יום' : 'עריכת אימון'}</h2>
+        <button onClick={onClose} aria-label="סגור">
+          <X size={18} style={{ color: 'var(--muted)' }} />
+        </button>
+      </div>
+
+      {/* rest toggle (plan only) */}
+      {mode === 'plan' && (
+        <button
+          onClick={() => setRest((r) => !r)}
+          className="chip self-start"
+          style={rest ? { background: 'var(--lime-dim)', borderColor: 'var(--lime-border)', color: 'var(--lime)' } : {}}
+        >
+          💤 יום מנוחה
+        </button>
+      )}
+
+      {!rest && (
+        <>
+          <div>
+            <label className="label-muted block mb-1.5">סוג אימון</label>
+            <div className="grid grid-cols-2 gap-2">
+              {DISCIPLINES.map((d) => (
+                <button
+                  key={d.key}
+                  onClick={() => pickType(d.key)}
+                  className="card-2 p-2 text-sm font-bold flex items-center gap-1.5 justify-center"
+                  style={type === d.key ? { borderColor: 'var(--lime-border)', background: 'var(--lime-dim)', color: 'var(--lime)' } : { color: 'var(--muted)' }}
+                >
+                  <span>{d.emoji}</span>
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {variantOpts.length > 0 && (
+            <div>
+              <label className="label-muted block mb-1.5">{DISCIPLINE_VARIANT[type].label}</label>
+              <div className="flex gap-2 flex-wrap">
+                {variantOpts.map((o) => (
+                  <button
+                    key={o.key}
+                    onClick={() => pickVariant(o.key)}
+                    className={`chip ${variant === o.key ? 'active' : ''}`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="label-muted block mb-1.5">שם האימון</label>
+            <input className="input-dark" value={name} onChange={(e) => setName(e.target.value)} placeholder="שם האימון" />
+          </div>
+
+          <div className="flex items-end gap-3">
+            <div>
+              <label className="label-muted block mb-1.5">משך (דקות)</label>
+              <input
+                className="input-dark !w-28"
+                type="number"
+                min={1}
+                max={300}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-1.5 pb-2.5" style={{ color: 'var(--orange)' }}>
+              <Flame size={16} />
+              <span className="font-bold text-sm">~{calories} קק"ל</span>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="label-muted">{isCrossfit ? 'תרגילים (לפי חלקים)' : 'תרגילים'}</label>
+              <button
+                onClick={() => loadSuggestion(type, variant)}
+                className="label-muted text-xs flex items-center gap-1"
+                style={{ color: 'var(--lime)' }}
+              >
+                <RefreshCw size={12} /> טען המלצה
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {exercises.map((ex, i) => (
+                <div key={i} className="card-2 p-2.5 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      className="input-dark !py-1.5 !px-3 !text-sm flex-1"
+                      value={ex.name}
+                      onChange={(e) => upd(i, 'name', e.target.value)}
+                      placeholder={`תרגיל ${i + 1}`}
+                    />
+                    <button onClick={() => delRow(i)} aria-label="הסר תרגיל">
+                      <Trash2 size={16} style={{ color: 'var(--muted)' }} />
+                    </button>
+                  </div>
+                  {isCrossfit && (
+                    <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                      {CROSSFIT_SECTIONS.map((s) => (
+                        <button
+                          key={s.key}
+                          onClick={() => upd(i, 'section', s.key)}
+                          className={`chip !px-2.5 !py-1 ${ex.section === s.key ? 'active' : ''}`}
+                          style={{ fontSize: 11 }}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <NumField label={isCrossfit ? 'סבבים' : 'סטים'} value={ex.sets} onChange={(v) => upd(i, 'sets', v)} />
+                    <NumField label={isWeighted ? 'חזרות' : 'חזרות/שנ׳'} value={ex.reps} onChange={(v) => upd(i, 'reps', v)} />
+                    {isWeighted && <NumField label='ק"ג' value={ex.weight_kg} onChange={(v) => upd(i, 'weight_kg', v)} />}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={addRow}
+              className="btn-ghost !py-2 text-sm mt-2 flex items-center justify-center gap-1.5"
+              style={{ color: 'var(--lime)', borderColor: 'var(--lime-border)' }}
+            >
+              <Plus size={15} /> הוסף תרגיל
+            </button>
+          </div>
+        </>
+      )}
+
+      <div className="flex gap-2">
+        <button className="btn-primary" onClick={handleSave} disabled={busy}>
+          {busy ? 'שומר...' : 'שמור'}
+        </button>
+        <button className="btn-ghost !w-auto px-4" onClick={onClose}>
+          ביטול
+        </button>
+      </div>
+    </section>
   )
 }
 
@@ -74,21 +303,22 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
   const [editDay, setEditDay] = useState(null) // day_of_week being edited
   const [savingDay, setSavingDay] = useState(false)
 
-  // set one day's workout to a chosen discipline (or rest) — enables a mixed week
-  async function setDay(day, discipline, index) {
+  // save one day's edited workout (from WorkoutEditor) -enables a mixed,
+  // fully-customisable week while still starting from the recommendation
+  async function saveDay(day, data) {
     setSavingDay(true)
-    const row =
-      discipline === 'rest'
-        ? { workout_name: 'מנוחה', muscle_groups: '', exercises: [], workout_type: profile?.workout_type || 'gym' }
-        : workoutForDiscipline(discipline, profile?.experience, index)
+    const row = data.rest
+      ? { workout_name: 'מנוחה', muscle_groups: '', exercises: [], workout_type: profile?.workout_type || 'gym', workout_variant: null }
+      : data
     await supabase.from('workout_plan').delete().eq('user_id', user.id).eq('day_of_week', day)
     const { error } = await supabase.from('workout_plan').insert({
       user_id: user.id,
       day_of_week: day,
       workout_name: row.workout_name,
-      muscle_groups: row.muscle_groups,
-      exercises_json: row.exercises,
+      muscle_groups: row.muscle_groups || '',
+      exercises_json: row.exercises || [],
       workout_type: row.workout_type,
+      workout_variant: row.workout_variant || null,
     })
     setSavingDay(false)
     setEditDay(null)
@@ -116,6 +346,7 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
         muscle_groups: day.muscle_groups,
         exercises_json: day.exercises,
         workout_type: day.workout_type,
+        workout_variant: day.workout_variant,
       }))
     )
     setSwitching(null)
@@ -127,7 +358,7 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
   return (
     <div className="flex flex-col gap-2.5">
       <section className="card !py-3 fade-up">
-        <p className="label-muted text-sm mb-2">בנה מחדש את כל השבוע בסוג אחד — או ערוך כל יום בנפרד עם ✏️ לשילוב סוגים</p>
+        <p className="label-muted text-sm mb-2">בנה מחדש את כל השבוע בסוג אחד - או ערוך כל יום בנפרד עם ✏️ לשילוב סוגים</p>
         <div className="grid grid-cols-2 gap-2">
           {DISCIPLINES.map((d) => (
             <button
@@ -153,6 +384,19 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
         const isRest = !entry || entry.workout_name === 'מנוחה'
         const exercises = entry?.exercises_json || []
         const dayType = entry?.workout_type
+        if (editDay === day) {
+          return (
+            <WorkoutEditor
+              key={day}
+              mode="plan"
+              profile={profile}
+              busy={savingDay}
+              initial={entry || { workout_name: '', workout_type: current, exercises_json: [] }}
+              onSave={(data) => saveDay(day, data)}
+              onClose={() => setEditDay(null)}
+            />
+          )
+        }
         return (
           <section
             key={day}
@@ -207,38 +451,14 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
                 </span>
               )}
               <button
-                onClick={() => setEditDay(editDay === day ? null : day)}
+                onClick={() => setEditDay(day)}
                 aria-label="ערוך יום"
                 className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                 style={{ background: 'var(--bg-card-2)', border: '1px solid var(--border)' }}
               >
-                <Pencil size={14} style={{ color: editDay === day ? 'var(--lime)' : 'var(--muted)' }} />
+                <Pencil size={14} style={{ color: 'var(--muted)' }} />
               </button>
             </div>
-
-            {editDay === day && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {DISCIPLINES.map((d) => (
-                  <button
-                    key={d.key}
-                    disabled={savingDay}
-                    onClick={() => setDay(day, d.key, i)}
-                    className="chip"
-                    style={dayType === d.key && !isRest ? { background: 'var(--lime-dim)', borderColor: 'var(--lime-border)', color: 'var(--lime)' } : {}}
-                  >
-                    {d.emoji} {d.label}
-                  </button>
-                ))}
-                <button
-                  disabled={savingDay}
-                  onClick={() => setDay(day, 'rest', i)}
-                  className="chip"
-                  style={isRest ? { background: 'var(--lime-dim)', borderColor: 'var(--lime-border)', color: 'var(--lime)' } : {}}
-                >
-                  💤 מנוחה
-                </button>
-              </div>
-            )}
           </section>
         )
       })}
@@ -248,7 +468,7 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
 
 /* ───────────────────────── Tab 2: Today's Workout ───────────────────────── */
 
-function TodayTab({ plan, user, showToast }) {
+function TodayTab({ plan, user, profile, showToast }) {
   const todayPlan = plan.find((p) => p.day_of_week === todayKey())
   const exercises = todayPlan?.exercises_json || []
   const isRest = !todayPlan || todayPlan.workout_name === 'מנוחה' || exercises.length === 0
@@ -269,11 +489,18 @@ function TodayTab({ plan, user, showToast }) {
       date: todayISO(),
       workout_name: todayPlan.workout_name,
       workout_type: todayPlan.workout_type || 'gym',
+      workout_variant: todayPlan.workout_variant || null,
       exercises_json: exercises.map((ex, i) => ({
         ...ex,
         actual_weight_kg: actualWeights[i] !== undefined && actualWeights[i] !== '' ? +actualWeights[i] : ex.weight_kg,
       })),
       duration_min: durationMin,
+      calories_burned: calcCaloriesBurned({
+        workout_type: todayPlan.workout_type || 'gym',
+        variant: todayPlan.workout_variant,
+        duration_min: durationMin,
+        weight_kg: profile?.weight_kg,
+      }),
       completed: true,
     })
     setSaving(false)
@@ -292,7 +519,7 @@ function TodayTab({ plan, user, showToast }) {
       <section className="card fade-up fade-up-2 text-center py-12">
         <p className="text-5xl mb-3">💤</p>
         <p className="font-bold text-lg">היום מנוחה</p>
-        <p className="label-muted text-sm mt-1">השריר נבנה בזמן המנוחה — תחזור מחר חזק יותר</p>
+        <p className="label-muted text-sm mt-1">השריר נבנה בזמן המנוחה - תחזור מחר חזק יותר</p>
       </section>
     )
   }
@@ -447,7 +674,7 @@ function beep() {
     osc.start()
     osc.stop(ctx.currentTime + 0.5)
   } catch {
-    // audio not available — silent fallback
+    // audio not available -silent fallback
   }
 }
 
@@ -455,6 +682,7 @@ function beep() {
 
 function AddWorkoutTab({ user, profile, showToast, onAdded }) {
   const [type, setType] = useState(profile?.workout_type || 'gym')
+  const [variant, setVariant] = useState(defaultVariant(profile?.workout_type || 'gym', profile?.experience))
   const [name, setName] = useState('')
   const [duration, setDuration] = useState(45)
   const [exercises, setExercises] = useState([{ name: '', sets: 3, reps: 10, weight_kg: 0, section: 'strength' }])
@@ -463,6 +691,13 @@ function AddWorkoutTab({ user, profile, showToast, onAdded }) {
   const isGym = type === 'gym'
   const isCrossfit = type === 'crossfit'
   const showExercises = isGym || isCrossfit // both record sets/reps/weight
+  const variantOpts = DISCIPLINE_VARIANT[type]?.options || []
+  const calories = calcCaloriesBurned({ workout_type: type, variant, duration_min: duration, weight_kg: profile?.weight_kg })
+
+  function pickType(t) {
+    setType(t)
+    setVariant(defaultVariant(t, profile?.experience))
+  }
 
   function updateExercise(i, key, value) {
     setExercises((list) => list.map((ex, j) => (j === i ? { ...ex, [key]: value } : ex)))
@@ -494,8 +729,10 @@ function AddWorkoutTab({ user, profile, showToast, onAdded }) {
       date: todayISO(),
       workout_name: name.trim(),
       workout_type: type,
+      workout_variant: variant,
       exercises_json: cleanExercises,
       duration_min: +duration || null,
+      calories_burned: calories,
       completed: true,
     })
     setSaving(false)
@@ -512,7 +749,7 @@ function AddWorkoutTab({ user, profile, showToast, onAdded }) {
           {DISCIPLINES.map((d) => (
             <button
               key={d.key}
-              onClick={() => setType(d.key)}
+              onClick={() => pickType(d.key)}
               className="card-2 p-2.5 text-sm font-bold flex items-center gap-2 justify-center transition-all"
               style={
                 type === d.key
@@ -527,6 +764,19 @@ function AddWorkoutTab({ user, profile, showToast, onAdded }) {
         </div>
       </div>
 
+      {variantOpts.length > 0 && (
+        <div>
+          <label className="label-muted block mb-1.5">{DISCIPLINE_VARIANT[type].label}</label>
+          <div className="flex gap-2 flex-wrap">
+            {variantOpts.map((o) => (
+              <button key={o.key} onClick={() => setVariant(o.key)} className={`chip ${variant === o.key ? 'active' : ''}`}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <label className="label-muted block mb-1.5">שם האימון</label>
         <input
@@ -537,22 +787,28 @@ function AddWorkoutTab({ user, profile, showToast, onAdded }) {
         />
       </div>
 
-      <div>
-        <label className="label-muted block mb-1.5">משך (דקות)</label>
-        <input
-          className="input-dark !w-32"
-          type="number"
-          min={1}
-          max={300}
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-        />
+      <div className="flex items-end gap-3">
+        <div>
+          <label className="label-muted block mb-1.5">משך (דקות)</label>
+          <input
+            className="input-dark !w-28"
+            type="number"
+            min={1}
+            max={300}
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-1.5 pb-2.5" style={{ color: 'var(--orange)' }}>
+          <Flame size={16} />
+          <span className="font-bold text-sm">~{calories} קק"ל</span>
+        </div>
       </div>
 
       {showExercises && (
         <div>
           <label className="label-muted block mb-1.5">
-            {isCrossfit ? 'תרגילים — חלק לפי כוח / אירובי / מטקון' : 'תרגילים'}
+            {isCrossfit ? 'תרגילים - חלק לפי כוח / אירובי / מטקון' : 'תרגילים'}
           </label>
           <div className="flex flex-col gap-2">
             {exercises.map((ex, i) => (
@@ -628,19 +884,43 @@ function NumField({ label, value, onChange }) {
 
 /* ───────────────────────── Tab 4: History ───────────────────────── */
 
-function HistoryTab({ user }) {
+function HistoryTab({ user, profile, showToast }) {
   const [logs, setLogs] = useState(null)
+  const [editing, setEditing] = useState(null) // log row being edited
+  const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
-    if (!user) return
-    supabase
+  async function load() {
+    const { data } = await supabase
       .from('workout_log')
       .select('*')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
-      .limit(10)
-      .then(({ data }) => setLogs(data || []))
+      .limit(20)
+    setLogs(data || [])
+  }
+  useEffect(() => {
+    if (user) load()
   }, [user])
+
+  async function saveEdit(data) {
+    setBusy(true)
+    const { error } = await supabase
+      .from('workout_log')
+      .update({
+        workout_name: data.workout_name,
+        workout_type: data.workout_type,
+        workout_variant: data.workout_variant || null,
+        exercises_json: data.exercises || [],
+        duration_min: data.duration_min,
+        calories_burned: data.calories_burned,
+      })
+      .eq('id', editing.id)
+    setBusy(false)
+    if (error) return showToast('שגיאה בעדכון 😕')
+    setEditing(null)
+    showToast('האימון עודכן ✅')
+    load()
+  }
 
   if (!logs)
     return (
@@ -648,6 +928,19 @@ function HistoryTab({ user }) {
         <div className="spinner" />
       </div>
     )
+
+  if (editing) {
+    return (
+      <WorkoutEditor
+        mode="log"
+        profile={profile}
+        busy={busy}
+        initial={editing}
+        onSave={saveEdit}
+        onClose={() => setEditing(null)}
+      />
+    )
+  }
 
   if (logs.length === 0)
     return (
@@ -660,8 +953,13 @@ function HistoryTab({ user }) {
 
   return (
     <div className="flex flex-col gap-2.5">
+      <p className="label-muted text-sm fade-up">הקש על אימון כדי לצפות ולערוך אותו בדיעבד ✏️</p>
       {logs.map((log, i) => (
-        <section key={log.id} className={`card !py-3.5 fade-up fade-up-${Math.min(i + 1, 6)} flex items-center gap-3`}>
+        <button
+          key={log.id}
+          onClick={() => setEditing(log)}
+          className={`card !py-3.5 fade-up fade-up-${Math.min(i + 1, 6)} flex items-center gap-3 text-right w-full`}
+        >
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg"
             style={{ background: 'var(--lime-dim)', border: '1px solid var(--lime-border)' }}
@@ -673,19 +971,14 @@ function HistoryTab({ user }) {
             <p className="label-muted" style={{ fontSize: 12 }}>
               {hebrewShortDate(log.date)}
               {log.workout_type ? ` · ${DISCIPLINE_LABELS[log.workout_type] || log.workout_type}` : ''}
+              {log.workout_variant ? ` (${variantLabel(log.workout_type, log.workout_variant)})` : ''}
               {log.duration_min ? ` · ${log.duration_min} דק׳` : ''}
               {(log.exercises_json || []).length > 0 ? ` · ${log.exercises_json.length} תרגילים` : ''}
+              {log.calories_burned ? ` · 🔥 ${Math.round(log.calories_burned)} קק"ל` : ''}
             </p>
           </div>
-          {log.completed && (
-            <span
-              className="text-[10px] font-extrabold rounded-full px-2.5 py-1 shrink-0"
-              style={{ background: 'var(--lime-dim)', color: 'var(--lime)', border: '1px solid var(--lime-border)' }}
-            >
-              ✓ הושלם
-            </span>
-          )}
-        </section>
+          <Pencil size={15} style={{ color: 'var(--muted)' }} className="shrink-0" />
+        </button>
       ))}
     </div>
   )

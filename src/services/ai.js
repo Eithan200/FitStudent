@@ -3,7 +3,7 @@
 // Every function keeps the exact signature Phase 2 will need,
 // so swapping in real calls is a body-only change.
 // ─────────────────────────────────────────────────────────────
-import { foodResults, recipes, planTemplates } from '../data/mockData'
+import { foodResults, recipes, planTemplates, defaultVariant } from '../data/mockData'
 import { DAY_KEYS } from '../utils/dates'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -35,10 +35,41 @@ export async function detectFridgeIngredients(imageBase64) {
 // recipe from exactly those ingredients. Phase 1 returns a close mock match.
 export async function recipeFromIngredients(ingredients) {
   await sleep(2000)
-  const joined = (ingredients || []).join(' ')
-  // try to surface a recipe that shares an ingredient keyword; else random
-  const match = recipes.find((r) => r.ingredients.some((ing) => joined.includes(ing.split(' ')[0])))
-  return match || recipes[Math.floor(Math.random() * recipes.length)]
+  const ranked = rankRecipesByIngredients(ingredients)
+  return ranked[0]?.recipe || recipes[Math.floor(Math.random() * recipes.length)]
+}
+
+// Hebrew-ish loose word match: share a 3-char root prefix
+const _root = (w) => w.replace(/[0-9״"׳']/g, '').trim()
+const _words = (s) => s.split(/[\s,]+/).map(_root).filter((w) => w.length >= 3)
+const _shareRoot = (a, b) => a.slice(0, 3) === b.slice(0, 3)
+
+// Rank recipes by overlap with the user's ingredients. Returns
+// { recipe, have:[], missing:[], needsExtra } sorted: most overlap first,
+// then recipes missing only a few easy-to-buy items (needsExtra=true).
+export function rankRecipesByIngredients(ingredients) {
+  const userWords = (ingredients || []).flatMap(_words)
+  if (userWords.length === 0) return []
+  const scored = recipes
+    .map((r) => {
+      const have = []
+      const missing = []
+      r.ingredients.forEach((ing) => {
+        const matched = _words(ing).some((w) => userWords.some((u) => _shareRoot(u, w)))
+        if (matched) have.push(ing)
+        else missing.push(ing)
+      })
+      return { recipe: r, have, missing, needsExtra: missing.length > 0 }
+    })
+    .filter((s) => s.have.length > 0)
+  scored.sort((a, b) => b.have.length - a.have.length || a.missing.length - b.missing.length)
+  return scored
+}
+
+// PHASE 2: posts the ingredient list and returns ranked matches.
+export async function suggestRecipesFromIngredients(ingredients) {
+  await sleep(1800)
+  return rankRecipesByIngredients(ingredients)
 }
 
 // PHASE 2: replace with Gemini API call via Make.com Scenario E
@@ -47,7 +78,8 @@ export async function recipeFromIngredients(ingredients) {
 // discipline + experience, schedules workouts_per_week training days.
 export function generateWorkoutPlan({ experience, workouts_per_week, workout_type = 'gym' }) {
   const discipline = planTemplates[workout_type] || planTemplates.gym
-  const template = discipline[experience] || discipline.beginner || planTemplates.gym.beginner
+  const variant = defaultVariant(workout_type, experience)
+  const template = discipline[variant] || Object.values(discipline)[0]
   const count = Math.min(Math.max(workouts_per_week || 3, 1), 6)
 
   // spread training days evenly across sunday..saturday
@@ -63,7 +95,7 @@ export function generateWorkoutPlan({ experience, workouts_per_week, workout_typ
   return DAY_KEYS.map((day, i) => {
     const slotIndex = slots.indexOf(i)
     if (slotIndex === -1) {
-      return { day_of_week: day, workout_name: 'מנוחה', muscle_groups: '', exercises: [], workout_type }
+      return { day_of_week: day, workout_name: 'מנוחה', muscle_groups: '', exercises: [], workout_type, workout_variant: variant }
     }
     const workout = template[slotIndex % template.length]
     return {
@@ -72,21 +104,23 @@ export function generateWorkoutPlan({ experience, workouts_per_week, workout_typ
       muscle_groups: workout.muscle_groups,
       exercises: workout.exercises,
       workout_type,
+      workout_variant: variant,
     }
   })
 }
 
-// Build a single day's workout from a discipline template — used when the user
-// mixes disciplines across the week (e.g. Sun gym, Mon pilates) in My Plan.
-export function workoutForDiscipline(workout_type, experience, variant = 0) {
+// Build a single day's workout from a discipline + variant (level/style) — used
+// when the user mixes disciplines across the week or edits a single day.
+export function workoutForDiscipline(workout_type, variant, index = 0) {
   const disc = planTemplates[workout_type] || planTemplates.gym
-  const tmpl = disc[experience] || disc.beginner || planTemplates.gym.beginner
-  const w = tmpl[Math.abs(variant) % tmpl.length]
+  const tmpl = disc[variant] || Object.values(disc)[0]
+  const w = tmpl[Math.abs(index) % tmpl.length]
   return {
     workout_name: w.workout_name,
     muscle_groups: w.muscle_groups,
     exercises: w.exercises,
     workout_type,
+    workout_variant: variant,
   }
 }
 

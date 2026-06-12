@@ -19,10 +19,10 @@ export default function Auth({ mode = 'login' }) {
       if (isSignup) {
         const { data, error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
-        // alpha: email confirmation disabled — session returns immediately
+        // alpha: email confirmation disabled -session returns immediately
         if (!data.session) {
           const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password })
-          if (loginErr) throw new Error('החשבון נוצר — נסה להתחבר')
+          if (loginErr) throw new Error('החשבון נוצר - נסה להתחבר')
         }
         navigate('/onboarding')
       } else {
@@ -116,9 +116,9 @@ export default function Auth({ mode = 'login' }) {
 
 function translateError(msg = '') {
   if (msg.includes('Invalid login credentials')) return 'אימייל או סיסמה שגויים'
-  if (msg.includes('already registered')) return 'האימייל כבר רשום במערכת — נסה להתחבר'
+  if (msg.includes('already registered')) return 'האימייל כבר רשום במערכת - נסה להתחבר'
   if (msg.includes('at least 6')) return 'הסיסמה חייבת להכיל לפחות 6 תווים'
   if (msg.includes('valid email')) return 'כתובת אימייל לא תקינה'
-  if (msg.includes('rate limit') || msg.includes('Too many')) return 'יותר מדי ניסיונות — נסה שוב בעוד רגע'
-  return msg || 'שגיאה — נסה שוב'
+  if (msg.includes('rate limit') || msg.includes('Too many')) return 'יותר מדי ניסיונות - נסה שוב בעוד רגע'
+  return msg || 'שגיאה - נסה שוב'
 }
