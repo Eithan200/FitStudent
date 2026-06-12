@@ -1,8 +1,32 @@
+# Dependencies
 node_modules
+
+# Build output
 dist
-.claude/settings.local.json
+
+# Environment (never commit real keys)
 .env
 .env.local
+.env.*.local
+
+# Local tooling / editor / AI-agent caches (not part of the app)
+.agents/
+.claude/
+.mcp.json
+skills-lock.json
+
+# Documentation sources (PDFs are committed instead)
+docs/*.html
+
+# Internal planning / scratch artifacts
+FitStudent_App_Alpha.html
+FitStudent-Guide.html
+FitStudent_Team_Guide.html
+FitStudent_Presentation_v2.html
+FitStudent_Build_Plan.md
+FitStudent_DB_Setup.sql
+
+# OS / misc
 .DS_Store
 *.log
-.vercel
+COMMIT_MSG.tmp
