@@ -102,7 +102,7 @@ export default function Onboarding() {
       await supabase.from('weight_log').insert({ user_id: user.id, weight_kg: numeric.weight_kg })
 
       // PHASE 2: this becomes Make.com Scenario E → Gemini-generated plan
-      const plan = generateWorkoutPlan({ ...form, ...numeric })
+      const plan = await generateWorkoutPlan({ ...form, ...numeric })
       await supabase.from('workout_plan').delete().eq('user_id', user.id)
       const { error: planErr } = await supabase.from('workout_plan').insert(
         plan.map((day) => ({

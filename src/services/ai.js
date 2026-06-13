@@ -1,41 +1,83 @@
 // ─────────────────────────────────────────────────────────────
-// AI integration stubs — Phase 1 returns mock data.
-// Every function keeps the exact signature Phase 2 will need,
-// so swapping in real calls is a body-only change.
+// AI integration layer.
+//
+// Each feature posts to a Make.com webhook (Phase 2). The real AI keys
+// (Gemini / Perplexity) live inside Make.com, never here — only the public
+// webhook URLs are read from the environment. If a webhook is not configured,
+// or the call fails, we fall back to local mock data so the app never breaks.
 // ─────────────────────────────────────────────────────────────
 import { foodResults, recipes, planTemplates, defaultVariant } from '../data/mockData'
 import { DAY_KEYS } from '../utils/dates'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-// PHASE 2: POST to Make.com webhook at https://hook.make.com/<scenario-A-food-analysis>
-// body: { image_base64, user_id, meal_type } → Claude Vision + Perplexity verified JSON
+// Public Make.com webhook URLs (safe in the frontend; no secrets here).
+const WEBHOOKS = {
+  food: import.meta.env.VITE_MAKE_WEBHOOK_FOOD,
+  fridgeDetect: import.meta.env.VITE_MAKE_WEBHOOK_FRIDGE_DETECT,
+  fridgeRecipe: import.meta.env.VITE_MAKE_WEBHOOK_FRIDGE_RECIPE,
+  plan: import.meta.env.VITE_MAKE_WEBHOOK_PLAN,
+}
+
+async function callWebhook(url, payload) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`webhook ${res.status}`)
+  return res.json()
+}
+
+// Try the webhook; on missing config or any failure, return the mock instead.
+async function withFallback(url, payload, mockFn, mockDelay = 800) {
+  if (url) {
+    try {
+      return await callWebhook(url, payload)
+    } catch (e) {
+      console.warn('[ai] webhook failed, falling back to mock:', e?.message)
+    }
+  }
+  await sleep(mockDelay)
+  return mockFn()
+}
+
+// PHASE 2 — Make.com Scenario A: Gemini Vision identifies the food, Perplexity
+// verifies the macros. Returns { name, emoji, items, calories, protein_g, ... }.
 export async function analyzeFoodImage(imageBase64) {
-  await sleep(2000) // simulate Claude Vision latency
-  return foodResults[Math.floor(Math.random() * foodResults.length)]
+  return withFallback(
+    WEBHOOKS.food,
+    { image_base64: imageBase64 },
+    () => foodResults[Math.floor(Math.random() * foodResults.length)],
+    2000
+  )
 }
 
-// PHASE 2: POST to Make.com webhook at https://hook.make.com/<scenario-B-fridge-recipe>
-// body: { image_base64, user_id } → Claude Vision ingredients → Claude recipe → Imagen image
+// PHASE 2 — Make.com Scenario B (single-shot): image → a full recipe.
+// Kept for convenience; the UI uses detect + suggest below.
 export async function generateRecipeFromFridge(imageBase64) {
-  await sleep(3000) // simulate full Scenario B chain latency
-  return recipes[Math.floor(Math.random() * recipes.length)]
+  return withFallback(
+    WEBHOOKS.fridgeRecipe,
+    { image_base64: imageBase64 },
+    () => recipes[Math.floor(Math.random() * recipes.length)],
+    3000
+  )
 }
 
-// PHASE 2: POST image to Make.com Scenario B step 1 → Claude Vision returns the
-// list of ingredients it detected in the fridge photo (user can then correct it).
+// PHASE 2 — Make.com Scenario B1: Gemini Vision lists the ingredients it sees in
+// the fridge photo (the user then corrects them). Returns string[].
 export async function detectFridgeIngredients(imageBase64) {
-  await sleep(2500)
-  const r = recipes[Math.floor(Math.random() * recipes.length)]
-  // mock: surface the chosen recipe's ingredients as if "detected", plus staples
-  return r.ingredients.slice(0, 5)
+  return withFallback(
+    WEBHOOKS.fridgeDetect,
+    { image_base64: imageBase64 },
+    () => recipes[Math.floor(Math.random() * recipes.length)].ingredients.slice(0, 5),
+    2500
+  )
 }
 
-// PHASE 2: POST the (corrected) ingredient list to Make.com → Claude builds a
-// recipe from exactly those ingredients. Phase 1 returns a close mock match.
+// PHASE 2 — single recipe from a (corrected) ingredient list.
 export async function recipeFromIngredients(ingredients) {
-  await sleep(2000)
-  const ranked = rankRecipesByIngredients(ingredients)
+  const ranked = await suggestRecipesFromIngredients(ingredients)
   return ranked[0]?.recipe || recipes[Math.floor(Math.random() * recipes.length)]
 }
 
@@ -66,17 +108,33 @@ export function rankRecipesByIngredients(ingredients) {
   return scored
 }
 
-// PHASE 2: posts the ingredient list and returns ranked matches.
+// PHASE 2 — Make.com Scenario B2: Gemini builds recipes from the ingredients.
+// Falls back to local ranking of the mock recipes.
 export async function suggestRecipesFromIngredients(ingredients) {
-  await sleep(1800)
-  return rankRecipesByIngredients(ingredients)
+  return withFallback(
+    WEBHOOKS.fridgeRecipe,
+    { ingredients },
+    () => rankRecipesByIngredients(ingredients),
+    1800
+  )
 }
 
-// PHASE 2: replace with Gemini API call via Make.com Scenario E
-// ("Create a personalized weekly workout plan... Return JSON {monday:{...}}")
-// Phase 1: static template generator — picks a preset weekly template by
-// discipline + experience, schedules workouts_per_week training days.
-export function generateWorkoutPlan({ experience, workouts_per_week, workout_type = 'gym' }) {
+// PHASE 2 — Make.com Scenario E: Gemini generates a weekly plan from the
+// profile. Async. Falls back to the local template generator.
+// NOTE: callers must `await` this (Onboarding, Workouts).
+export async function generateWorkoutPlan(profile) {
+  const { experience, workouts_per_week, workout_type = 'gym', goal, body_type, weight_kg } = profile
+  return withFallback(
+    WEBHOOKS.plan,
+    { goal, experience, workouts_per_week, workout_type, body_type, weight_kg },
+    () => buildLocalPlan({ experience, workouts_per_week, workout_type }),
+    1200
+  )
+}
+
+// Local static generator — preset weekly template by discipline + level/style,
+// spreading workouts_per_week training days across the week.
+function buildLocalPlan({ experience, workouts_per_week, workout_type = 'gym' }) {
   const discipline = planTemplates[workout_type] || planTemplates.gym
   const variant = defaultVariant(workout_type, experience)
   const template = discipline[variant] || Object.values(discipline)[0]
