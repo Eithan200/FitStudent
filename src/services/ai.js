@@ -45,12 +45,14 @@ async function withFallback(url, payload, mockFn, mockDelay = 800) {
 // PHASE 2 — Make.com Scenario A: Gemini Vision identifies the food, Perplexity
 // verifies the macros. Returns { name, emoji, items, calories, protein_g, ... }.
 export async function analyzeFoodImage(imageBase64) {
-  return withFallback(
-    WEBHOOKS.food,
-    { image_base64: imageBase64 },
-    () => foodResults[Math.floor(Math.random() * foodResults.length)],
-    2000
-  )
+  try {
+    if (!WEBHOOKS.food) throw new Error('no webhook')
+    return await callWebhook(WEBHOOKS.food, { image_base64: imageBase64 })
+  } catch (e) {
+    console.warn('AI food failed, fallback to mock', e)
+    await sleep(800)
+    return foodResults[Math.floor(Math.random() * foodResults.length)]
+  }
 }
 
 // PHASE 2 — Make.com Scenario B (single-shot): image → a full recipe.
@@ -67,12 +69,17 @@ export async function generateRecipeFromFridge(imageBase64) {
 // PHASE 2 — Make.com Scenario B1: Gemini Vision lists the ingredients it sees in
 // the fridge photo (the user then corrects them). Returns string[].
 export async function detectFridgeIngredients(imageBase64) {
-  return withFallback(
+  // קודם נשמור את התשובה שמגיעה מ-Make בתוך משתנה
+  const result = await withFallback(
     WEBHOOKS.fridgeDetect,
     { image_base64: imageBase64 },
     () => recipes[Math.floor(Math.random() * recipes.length)].ingredients.slice(0, 5),
     2500
-  )
+  );
+  
+  // הטריק: אם הגיע מ-Make אובייקט שמכיל items, נשלוף רק את המערך.
+  // אם מנגנון הגיבוי הופעל, הוא יחזיר את הרשימה הרגילה של הגיבוי.
+  return result.items ? result.items : result;
 }
 
 // PHASE 2 — single recipe from a (corrected) ingredient list.
@@ -110,26 +117,55 @@ export function rankRecipesByIngredients(ingredients) {
 
 // PHASE 2 — Make.com Scenario B2: Gemini builds recipes from the ingredients.
 // Falls back to local ranking of the mock recipes.
-export async function suggestRecipesFromIngredients(ingredients) {
-  return withFallback(
+export async function suggestRecipesFromIngredients(ingredients, proteinTargetG = 50) {
+  const result = await withFallback(
     WEBHOOKS.fridgeRecipe,
-    { ingredients },
-    () => rankRecipesByIngredients(ingredients),
-    1800
-  )
+    { 
+      ingredients: ingredients, 
+      protein_target_g: proteinTargetG 
+    },
+    () => recipes.slice(0, 3), // גיבוי מהיר
+    4000
+  );
+  
+  // מחלצים את המערך
+  let recipesArray = result.recipes ? result.recipes : result;
+
+  // הטריק: מסדרים את המבנה למקרה ש-OpenAI שכח את עטיפת ה-"recipe"
+  return recipesArray.map(item => {
+    if (!item.recipe) {
+      return {
+        recipe: {
+          name: item.name,
+          emoji: item.emoji || "🍳",
+          prep_time_min: item.prep_time_min,
+          servings: item.servings,
+          ingredients: item.ingredients || [],
+          steps: item.steps || [],
+          macros: item.macros || {}
+        },
+        have: item.have || [],
+        missing: item.missing || [],
+        needsExtra: item.needsExtra || false
+      };
+    }
+    return item;
+  });
 }
 
 // PHASE 2 — Make.com Scenario E: Gemini generates a weekly plan from the
 // profile. Async. Falls back to the local template generator.
 // NOTE: callers must `await` this (Onboarding, Workouts).
 export async function generateWorkoutPlan(profile) {
-  const { experience, workouts_per_week, workout_type = 'gym', goal, body_type, weight_kg } = profile
-  return withFallback(
+  const result = await withFallback(
     WEBHOOKS.plan,
-    { goal, experience, workouts_per_week, workout_type, body_type, weight_kg },
-    () => buildLocalPlan({ experience, workouts_per_week, workout_type }),
-    1200
-  )
+    profile, // שולח את כל נתוני הפרופיל (מטרה, ניסיון וכו')
+    () => workoutPlans.beginner, // הגיבוי למקרה של נפילה
+    6000 // נותנים ל-AI קצת יותר זמן לבנות תוכנית שלמה
+  );
+  
+  // מחלצים את מערך 7 הימים מהאובייקט ש-OpenAI מחזיר
+  return result.workout_plan ? result.workout_plan : result;
 }
 
 // Local static generator — preset weekly template by discipline + level/style,
