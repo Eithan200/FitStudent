@@ -64,15 +64,27 @@ export async function generateRecipeFromFridge(imageBase64) {
   )
 }
 
+// Normalize a detect response into a plain string[] of ingredient names.
+// Accepts a bare array, { items: [...] }, or { ingredients: [...] }, where each
+// entry may be a string or an object ({ name | item | ingredient }).
+function toIngredientList(res) {
+  const list = Array.isArray(res) ? res : res?.items || res?.ingredients || []
+  return list
+    .map((x) => (typeof x === 'string' ? x : x?.name || x?.item || x?.ingredient || ''))
+    .map((s) => String(s).trim())
+    .filter(Boolean)
+}
+
 // PHASE 2 — Make.com Scenario B1: Gemini Vision lists the ingredients it sees in
 // the fridge photo (the user then corrects them). Returns string[].
 export async function detectFridgeIngredients(imageBase64) {
-  return withFallback(
+  const res = await withFallback(
     WEBHOOKS.fridgeDetect,
     { image_base64: imageBase64 },
     () => recipes[Math.floor(Math.random() * recipes.length)].ingredients.slice(0, 5),
     2500
   )
+  return toIngredientList(res)
 }
 
 // PHASE 2 — single recipe from a (corrected) ingredient list.
@@ -109,14 +121,17 @@ export function rankRecipesByIngredients(ingredients) {
 }
 
 // PHASE 2 — Make.com Scenario B2: Gemini builds recipes from the ingredients.
-// Falls back to local ranking of the mock recipes.
+// Accepts a bare array or { recipes: [...] }. Falls back to local ranking.
 export async function suggestRecipesFromIngredients(ingredients) {
-  return withFallback(
+  const res = await withFallback(
     WEBHOOKS.fridgeRecipe,
     { ingredients },
     () => rankRecipesByIngredients(ingredients),
     1800
   )
+  const list = Array.isArray(res) ? res : res?.recipes || res?.results || []
+  // keep only well-formed entries the UI can render
+  return list.filter((s) => s && s.recipe && s.recipe.name)
 }
 
 // PHASE 2 — Make.com Scenario E: Gemini generates a weekly plan from the
