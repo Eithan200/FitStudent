@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Timer, CheckCircle2, Dumbbell, X, Plus, Trash2, Pencil, Flame, RefreshCw } from 'lucide-react'
+import { Timer, CheckCircle2, Dumbbell, X, Plus, Trash2, Pencil, Flame, RefreshCw, Calendar } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
@@ -18,7 +18,7 @@ import {
   variantLabel,
   defaultVariant,
 } from '../data/mockData'
-import { generateWorkoutPlan, workoutForDiscipline, recommendationsFor } from '../services/ai'
+import { generateWorkoutPlan, workoutForDiscipline, recommendationsFor, scheduleWorkoutToCalendar } from '../services/ai'
 import { calcCaloriesBurned } from '../utils/nutrition'
 import { todayKey, todayISO, DAY_KEYS, DAY_LETTERS_HE, hebrewShortDate } from '../utils/dates'
 
@@ -509,6 +509,7 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(false)
   const [savingPlan, setSavingPlan] = useState(false)
+  const [scheduling, setScheduling] = useState(false)
   const startTime = useRef(Date.now())
 
   // edit today's planned workout in-place (same editor as My Plan)
@@ -533,19 +534,6 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
     if (error) return showToast('שגיאה בעדכון 😕')
     showToast('האימון של היום עודכן ✅')
     reloadPlan()
-  }
-
-  if (editing) {
-    return (
-      <WorkoutEditor
-        mode="plan"
-        profile={profile}
-        busy={savingPlan}
-        initial={todayPlan || { workout_name: '', workout_type: profile?.workout_type || 'gym', exercises_json: [] }}
-        onSave={saveTodayPlan}
-        onClose={() => setEditing(false)}
-      />
-    )
   }
 
   async function completeWorkout() {
@@ -581,6 +569,46 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
     setTimeout(() => setCelebrating(false), 4000)
   }
 
+  // --- החדש: הפונקציה ששולחת ליומן דרך ה-Webhook שלנו ---
+  async function handleSchedule() {
+    // נבקש מהמשתמש שעה בפורמט "HH:MM"
+    const time = prompt("באיזו שעה לקבוע את האימון? (למשל: 15:30)", "17:00");
+    if (!time) return; // אם המשתמש ביטל
+
+    setScheduling(true);
+    try {
+      const [hours, minutes] = time.split(':');
+      const scheduledDate = new Date();
+      // כאן התיקון: אנחנו משתמשים ב-hours וב-minutes שהמשתמש הזין!
+      scheduledDate.setHours(parseInt(hours), parseInt(minutes), 0, 0); 
+      
+      await scheduleWorkoutToCalendar(
+        todayPlan.workout_name,
+        user.email,
+        scheduledDate.toISOString()
+      );
+      showToast(`האימון נקבע ל-${time}! 📅`);
+    } catch (err) {
+      console.error(err);
+      showToast('שגיאה בהוספה ליומן');
+    } finally {
+      setScheduling(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <WorkoutEditor
+        mode="plan"
+        profile={profile}
+        busy={savingPlan}
+        initial={todayPlan || { workout_name: '', workout_type: profile?.workout_type || 'gym', exercises_json: [] }}
+        onSave={saveTodayPlan}
+        onClose={() => setEditing(false)}
+      />
+    )
+  }
+
   if (isRest) {
     return (
       <section className="card fade-up fade-up-2 text-center py-10">
@@ -608,6 +636,16 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
             {todayPlan.workout_name}
           </h2>
           <div className="flex items-center gap-2 shrink-0">
+            {/* כפתור הוספה ליומן החדש */}
+            <button
+              onClick={handleSchedule}
+              disabled={scheduling}
+              aria-label="קבע ביומן"
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: 'var(--lime-dim)', border: '1px solid var(--lime-border)' }}
+            >
+              <Calendar size={14} style={{ color: 'var(--lime)' }} />
+            </button>
             {completed && <CheckCircle2 size={20} style={{ color: 'var(--lime)' }} />}
             <button
               onClick={() => setEditing(true)}
