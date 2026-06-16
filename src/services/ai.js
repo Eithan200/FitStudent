@@ -255,22 +255,3 @@ export async function registerTelegram(telegramId) {
 export function haptic(kind = 'light') {
   // intentionally a no-op in Phase 1
 }
-
-export async function scheduleWorkoutToCalendar(workoutName, userEmail, startTimeIso) {
-  const startTime = new Date(startTimeIso);
-  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // מוסיף שעה לאימון
-
-  const res = await fetch(import.meta.env.VITE_MAKE_WEBHOOK_CALENDAR, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      workout_name: workoutName,
-      user_email: userEmail,
-      start_time: startTime.toISOString(),
-      end_time: endTime.toISOString()
-    })
-  });
-
-  if (!res.ok) throw new Error('Failed to schedule calendar event');
-  return res.json();
-}
