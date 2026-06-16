@@ -139,7 +139,7 @@ export default function Onboarding() {
       </div>
     )
   }
-    <div className="min-h-dvh px-5 py-8 relative z-10 max-w-md mx-auto"></div>
+
   return (
     <div className="min-h-dvh px-5 py-8 relative z-10 max-w-md mx-auto">
       {/* progress header */}
