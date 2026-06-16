@@ -46,12 +46,14 @@ async function withFallback(url, payload, mockFn, mockDelay = 800) {
 // PHASE 2 — Make.com Scenario A: Gemini Vision identifies the food, Perplexity
 // verifies the macros. Returns { name, emoji, items, calories, protein_g, ... }.
 export async function analyzeFoodImage(imageBase64) {
-  return withFallback(
-    WEBHOOKS.food,
-    { image_base64: imageBase64 },
-    () => foodResults[Math.floor(Math.random() * foodResults.length)],
-    2000
-  )
+  try {
+    if (!WEBHOOKS.food) throw new Error('no webhook')
+    return await callWebhook(WEBHOOKS.food, { image_base64: imageBase64 })
+  } catch (e) {
+    console.warn('AI food failed, fallback to mock', e)
+    await sleep(800)
+    return foodResults[Math.floor(Math.random() * foodResults.length)]
+  }
 }
 
 // PHASE 2 — Make.com Scenario B (single-shot): image → a full recipe.
@@ -252,4 +254,23 @@ export async function registerTelegram(telegramId) {
 // Haptic feedback stub — Phase 2: navigator.vibrate patterns per event type
 export function haptic(kind = 'light') {
   // intentionally a no-op in Phase 1
+}
+
+export async function scheduleWorkoutToCalendar(workoutName, userEmail, startTimeIso) {
+  const startTime = new Date(startTimeIso);
+  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // מוסיף שעה לאימון
+
+  const res = await fetch(import.meta.env.VITE_MAKE_WEBHOOK_CALENDAR, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      workout_name: workoutName,
+      user_email: userEmail,
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString()
+    })
+  });
+
+  if (!res.ok) throw new Error('Failed to schedule calendar event');
+  return res.json();
 }
