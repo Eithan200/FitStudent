@@ -82,8 +82,6 @@ function normEx(ex) {
   }
 }
 
-// Editor for a single workout -used to tweak a planned day (future) or a past
-// logged workout. Starts from the recommendation but every field is editable.
 function WorkoutEditor({ initial, mode, profile, onSave, onClose, busy }) {
   const startRest = initial.workout_name === 'מנוחה' || (!initial.workout_name && (initial.exercises_json || initial.exercises || []).length === 0 && mode === 'plan' && initial.isRest)
   const [rest, setRest] = useState(initial.workout_name === 'מנוחה')
@@ -160,7 +158,6 @@ function WorkoutEditor({ initial, mode, profile, onSave, onClose, busy }) {
         </button>
       </div>
 
-      {/* rest toggle (plan only) */}
       {mode === 'plan' && (
         <button
           onClick={() => setRest((r) => !r)}
@@ -328,11 +325,9 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
   const byDay = Object.fromEntries(plan.map((p) => [p.day_of_week, p]))
   const current = profile?.workout_type || 'gym'
   const [switching, setSwitching] = useState(null)
-  const [editDay, setEditDay] = useState(null) // day_of_week being edited
+  const [editDay, setEditDay] = useState(null)
   const [savingDay, setSavingDay] = useState(false)
 
-  // save one day's edited workout (from WorkoutEditor) -enables a mixed,
-  // fully-customisable week while still starting from the recommendation
   async function saveDay(day, data) {
     setSavingDay(true)
     const row = data.rest
@@ -358,7 +353,6 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
   async function switchDiscipline(discipline) {
     if (discipline === current || switching) return
     setSwitching(discipline)
-    // regenerate the weekly plan for the new discipline; history (workout_log) is untouched
     const newPlan = await generateWorkoutPlan({
       experience: profile?.experience,
       workouts_per_week: profile?.workouts_per_week,
@@ -502,8 +496,8 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
   const isRest = !todayPlan || todayPlan.workout_name === 'מנוחה' || exercises.length === 0
 
   const [actualWeights, setActualWeights] = useState({})
-  const [timerFor, setTimerFor] = useState(null) // exercise index with active rest timer
-  const [restSeconds, setRestSeconds] = useState(60) // configurable rest duration
+  const [timerFor, setTimerFor] = useState(null)
+  const [restSeconds, setRestSeconds] = useState(60)
   const [celebrating, setCelebrating] = useState(false)
   const [completed, setCompleted] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -512,7 +506,6 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
   const [scheduling, setScheduling] = useState(false)
   const startTime = useRef(Date.now())
 
-  // edit today's planned workout in-place (same editor as My Plan)
   async function saveTodayPlan(data) {
     setSavingPlan(true)
     const day = todayKey()
@@ -569,17 +562,14 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
     setTimeout(() => setCelebrating(false), 4000)
   }
 
-  // --- החדש: הפונקציה ששולחת ליומן דרך ה-Webhook שלנו ---
   async function handleSchedule() {
-    // נבקש מהמשתמש שעה בפורמט "HH:MM"
     const time = prompt("באיזו שעה לקבוע את האימון? (למשל: 15:30)", "17:00");
-    if (!time) return; // אם המשתמש ביטל
+    if (!time) return;
 
     setScheduling(true);
     try {
       const [hours, minutes] = time.split(':');
       const scheduledDate = new Date();
-      // כאן התיקון: אנחנו משתמשים ב-hours וב-minutes שהמשתמש הזין!
       scheduledDate.setHours(parseInt(hours), parseInt(minutes), 0, 0); 
       
       await scheduleWorkoutToCalendar(
@@ -636,7 +626,6 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
             {todayPlan.workout_name}
           </h2>
           <div className="flex items-center gap-2 shrink-0">
-            {/* כפתור הוספה ליומן החדש */}
             <button
               onClick={handleSchedule}
               disabled={scheduling}
@@ -785,7 +774,6 @@ function RestTimer({ seconds = 60, onDone }) {
   )
 }
 
-// short completion beep via Web Audio API
 function beep() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
@@ -799,7 +787,6 @@ function beep() {
     osc.start()
     osc.stop(ctx.currentTime + 0.5)
   } catch {
-    // audio not available -silent fallback
   }
 }
 
@@ -815,7 +802,7 @@ function AddWorkoutTab({ user, profile, showToast, onAdded }) {
 
   const isGym = type === 'gym'
   const isCrossfit = type === 'crossfit'
-  const showExercises = isGym || isCrossfit // both record sets/reps/weight
+  const showExercises = isGym || isCrossfit 
   const variantOpts = DISCIPLINE_VARIANT[type]?.options || []
   const calories = calcCaloriesBurned({ workout_type: type, variant, duration_min: duration, weight_kg: profile?.weight_kg })
 
@@ -1011,7 +998,7 @@ function NumField({ label, value, onChange }) {
 
 function HistoryTab({ user, profile, showToast }) {
   const [logs, setLogs] = useState(null)
-  const [editing, setEditing] = useState(null) // log row being edited
+  const [editing, setEditing] = useState(null) 
   const [busy, setBusy] = useState(false)
 
   async function load() {
@@ -1113,9 +1100,8 @@ function HistoryTab({ user, profile, showToast }) {
 
 function LibraryTab({ profile }) {
   const [discipline, setDiscipline] = useState(profile?.workout_type || 'gym')
-  const [muscle, setMuscle] = useState('all') // gym-only sub-filter
+  const [muscle, setMuscle] = useState('all') 
 
-  // gym uses the muscle-group library; other disciplines use disciplineMovements
   const isGym = discipline === 'gym'
   const pool = isGym ? exerciseLibrary : disciplineMovements.filter((m) => m.muscle_group === discipline)
   const list = isGym && muscle !== 'all' ? pool.filter((e) => e.muscle_group === muscle) : pool

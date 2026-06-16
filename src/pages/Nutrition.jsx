@@ -314,25 +314,16 @@ function LogMealTab({ user, onAdded, showToast }) {
     setAdding(null)
   }
 
-  function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader()
-    r.onload = () => resolve(String(r.result).split(',')[1]) 
-    r.onerror = reject
-    r.readAsDataURL(file)
-  })
-}
-
-async function onFile(e) {
-  const file = e.target.files?.[0]
-  if (!file) return
-  setMode('analyzing')
-  const base64Image = await fileToBase64(file);
-  const mock = await analyzeFoodImage(base64Image);
-  setPhoto({ result: mock, quantity: 100 })
-  setMode('photo')
-  e.target.value = ''
-}
+  async function onFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setMode('analyzing')
+    const base64 = await imageFileToBase64(file)
+    const mock = await analyzeFoodImage(base64)
+    setPhoto({ result: mock, quantity: 100, image: base64 })
+    setMode('photo')
+    e.target.value = ''
+  }
 
   function addPhotoToMeal() {
     const { result, quantity } = photo
@@ -380,12 +371,23 @@ async function onFile(e) {
   }
 
   if (mode === 'photo' && photo) {
-    const { result, quantity } = photo
+    const { result, quantity, image } = photo
+    const factor = quantity / 100
+    const cals = Math.round(result.calories * factor)
+    // fat as a share of the meal's calories (scale-invariant)
+    const fatPct = result.calories > 0 ? Math.round(((result.fat_g * 9) / result.calories) * 100) : 0
+    // total grams from the detected items, scaled by the chosen quantity
+    const baseGrams = (result.items || []).reduce((s, it) => s + (+it.weight_g || 0), 0)
+    const grams = Math.round(baseGrams * factor)
     return (
       <section className="card fade-up flex flex-col gap-4">
         <div className="flex items-center gap-3">
-          <div className="card-2 flex items-center justify-center text-4xl" style={{ width: 64, height: 64 }}>
-            {result.emoji || '🍽️'}
+          <div className="card-2 flex items-center justify-center text-4xl overflow-hidden" style={{ width: 64, height: 64 }}>
+            {image ? (
+              <img src={`data:image/jpeg;base64,${image}`} alt="" className="w-full h-full object-cover" />
+            ) : (
+              result.emoji || '🍽️'
+            )}
           </div>
           <div>
             <p className="font-bold">זיהיתי: {result.name}</p>
@@ -393,13 +395,15 @@ async function onFile(e) {
           </div>
         </div>
         <div className="grid grid-cols-4 gap-2 text-center">
-          <MacroBadge value={Math.round((result.calories * quantity) / 100)} label='קק"ל' color="var(--lime)" />
-          <MacroBadge value={Math.round((result.protein_g * quantity) / 100)} label="חלבון" color="var(--blue)" />
-          <MacroBadge value={Math.round((result.carbs_g * quantity) / 100)} label="פחמ׳" color="var(--orange)" />
-          <MacroBadge value={Math.round((result.fat_g * quantity) / 100)} label="שומן" color="var(--purple)" />
+          <MacroBadge value={cals} label='קק"ל' color="var(--lime)" />
+          <MacroBadge value={`${Math.round(result.protein_g * factor)}g`} label="חלבון" color="var(--blue)" />
+          <MacroBadge value={`${Math.round(result.carbs_g * factor)}g`} label="פחמ׳" color="var(--orange)" />
+          <MacroBadge value={`${fatPct}%`} label="שומן" color="var(--purple)" />
         </div>
         <div>
-          <label className="label-muted block mb-1.5">כמות: {quantity}%</label>
+          <label className="label-muted block mb-1.5">
+            כמות: {quantity}%{grams > 0 ? ` · ~${grams} גרם` : ''}
+          </label>
           <input
             type="range"
             min={25}
