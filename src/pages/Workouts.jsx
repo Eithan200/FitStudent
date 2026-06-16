@@ -30,6 +30,79 @@ const TABS = [
   { key: 'library', label: 'ספרייה' },
 ]
 
+// next calendar date (YYYY-MM-DD) for a day_of_week key (today if it matches)
+function upcomingISO(dayKey) {
+  const idx = DAY_KEYS.indexOf(dayKey)
+  if (idx < 0) return todayISO()
+  const now = new Date()
+  const d = new Date(now)
+  d.setDate(now.getDate() + ((idx - now.getDay() + 7) % 7))
+  return d.toISOString().slice(0, 10)
+}
+
+// Reusable "add to Google Calendar" control — a calendar icon that opens a small
+// time picker and posts the workout to the calendar webhook. Used on the Today
+// tab and on each My-Plan day. Replaces the old window.prompt() flow.
+function CalendarSchedule({ workout, dateISO, user, profile, showToast }) {
+  const [open, setOpen] = useState(false)
+  const [time, setTime] = useState('18:00')
+  const [busy, setBusy] = useState(false)
+
+  async function confirm() {
+    setBusy(true)
+    try {
+      const [h, m] = time.split(':')
+      const start = new Date(`${dateISO}T00:00:00`)
+      start.setHours(parseInt(h) || 18, parseInt(m) || 0, 0, 0)
+      const exs = workout.exercises_json || workout.exercises || []
+      await scheduleWorkoutToCalendar({
+        workoutName: workout.workout_name,
+        userEmail: user?.email,
+        nickname: profile?.nickname,
+        startTime: start.toISOString(),
+        durationMin: Math.max(exs.length * 9, 30),
+      })
+      showToast('נוסף ליומן Google 📅')
+      setOpen(false)
+    } catch (e) {
+      console.error(e)
+      showToast('שגיאה בהוספה ליומן 😕')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-label="הוסף ליומן Google"
+        className="w-8 h-8 rounded-full flex items-center justify-center"
+        style={{ background: 'var(--lime-dim)', border: '1px solid var(--lime-border)' }}
+      >
+        <Calendar size={14} style={{ color: 'var(--lime)' }} />
+      </button>
+      {open && (
+        <div
+          className="absolute z-30 flex items-center gap-2 p-2"
+          style={{ insetInlineStart: 0, top: 38, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 6px 20px rgba(0,0,0,.35)' }}
+        >
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="input-dark !py-1 !px-2 !text-sm"
+            style={{ width: 112 }}
+          />
+          <button className="btn-primary !py-1.5 !px-3 text-sm" onClick={confirm} disabled={busy}>
+            {busy ? '...' : 'קבע'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Workouts() {
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') || 'plan'
@@ -472,6 +545,9 @@ function PlanTab({ plan, user, profile, reloadPlan, refreshProfile, showToast })
                   היום
                 </span>
               )}
+              {!isRest && (
+                <CalendarSchedule workout={entry} dateISO={upcomingISO(day)} user={user} profile={profile} showToast={showToast} />
+              )}
               <button
                 onClick={() => setEditDay(day)}
                 aria-label="ערוך יום"
@@ -503,7 +579,6 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(false)
   const [savingPlan, setSavingPlan] = useState(false)
-  const [scheduling, setScheduling] = useState(false)
   const startTime = useRef(Date.now())
 
   async function saveTodayPlan(data) {
@@ -562,33 +637,6 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
     setTimeout(() => setCelebrating(false), 4000)
   }
 
-  async function handleSchedule() {
-    const time = prompt("באיזו שעה לקבוע את האימון? (למשל: 15:30)", "17:00");
-    if (!time) return;
-
-    setScheduling(true);
-    try {
-      const [hours, minutes] = time.split(':');
-      const scheduledDate = new Date();
-      scheduledDate.setHours(parseInt(hours) || 17, parseInt(minutes) || 0, 0, 0);
-      const durationMin = Math.max((todayPlan.exercises_json || []).length * 9, 30);
-
-      await scheduleWorkoutToCalendar({
-        workoutName: todayPlan.workout_name,
-        userEmail: user.email,
-        nickname: profile?.nickname,
-        startTime: scheduledDate.toISOString(),
-        durationMin,
-      });
-      showToast(`האימון נקבע ל-${time}! 📅`);
-    } catch (err) {
-      console.error(err);
-      showToast('שגיאה בהוספה ליומן');
-    } finally {
-      setScheduling(false);
-    }
-  }
-
   if (editing) {
     return (
       <WorkoutEditor
@@ -629,15 +677,7 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
             {todayPlan.workout_name}
           </h2>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleSchedule}
-              disabled={scheduling}
-              aria-label="קבע ביומן"
-              className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: 'var(--lime-dim)', border: '1px solid var(--lime-border)' }}
-            >
-              <Calendar size={14} style={{ color: 'var(--lime)' }} />
-            </button>
+            <CalendarSchedule workout={todayPlan} dateISO={todayISO()} user={user} profile={profile} showToast={showToast} />
             {completed && <CheckCircle2 size={20} style={{ color: 'var(--lime)' }} />}
             <button
               onClick={() => setEditing(true)}
