@@ -230,19 +230,24 @@ export function workoutForDiscipline(workout_type, variant, index = 0) {
   }
 }
 
-// PHASE 2 — Make.com: schedule a workout to Google Calendar
-export async function scheduleWorkoutToCalendar(workoutName, userEmail, startTimeIso) {
-  if (!WEBHOOKS.calendar) throw new Error('No calendar webhook defined');
+// PHASE 2 — Make.com: schedule a workout to the user's Google Calendar.
+// Sends the user's email + nickname and both datetime and date-only fields so
+// the Make scenario has everything it needs to build the event.
+export async function scheduleWorkoutToCalendar({ workoutName, userEmail, nickname, startTime, endTime, durationMin = 60 }) {
+  if (!WEBHOOKS.calendar) throw new Error('No calendar webhook defined')
 
-  const startTime = new Date(startTimeIso);
-  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // אימון של שעה
+  const start = new Date(startTime)
+  const end = endTime ? new Date(endTime) : new Date(start.getTime() + durationMin * 60 * 1000)
 
   return await callWebhook(WEBHOOKS.calendar, {
     workout_name: workoutName,
     user_email: userEmail,
-    start_time: startTime.toISOString(),
-    end_time: endTime.toISOString()
-  });
+    nickname: nickname || '',
+    start_time: start.toISOString(),
+    end_time: end.toISOString(),
+    start_date: start.toISOString().slice(0, 10),
+    end_date: end.toISOString().slice(0, 10),
+  })
 }
 
 // PHASE 2: POST to Make.com webhook for Telegram daily-report registration

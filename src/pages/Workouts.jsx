@@ -570,13 +570,16 @@ function TodayTab({ plan, user, profile, reloadPlan, showToast }) {
     try {
       const [hours, minutes] = time.split(':');
       const scheduledDate = new Date();
-      scheduledDate.setHours(parseInt(hours), parseInt(minutes), 0, 0); 
-      
-      await scheduleWorkoutToCalendar(
-        todayPlan.workout_name,
-        user.email,
-        scheduledDate.toISOString()
-      );
+      scheduledDate.setHours(parseInt(hours) || 17, parseInt(minutes) || 0, 0, 0);
+      const durationMin = Math.max((todayPlan.exercises_json || []).length * 9, 30);
+
+      await scheduleWorkoutToCalendar({
+        workoutName: todayPlan.workout_name,
+        userEmail: user.email,
+        nickname: profile?.nickname,
+        startTime: scheduledDate.toISOString(),
+        durationMin,
+      });
       showToast(`האימון נקבע ל-${time}! 📅`);
     } catch (err) {
       console.error(err);
